@@ -1,0 +1,32 @@
+name: Tests
+
+on:
+  - pull_request
+  - push
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install Racket
+        uses: Bogdanp/setup-racket@v0.11
+      - name: Install Package and its Dependencies
+        run: raco pkg install --auto --batch
+      - name: Run tests
+        run: ./scripts/test.bash
+  toml-compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install Racket
+        uses: Bogdanp/setup-racket@v0.11
+      - name: Install Package and its Dependencies
+        run: raco pkg install --auto --batch
+      - name: Install toml-test
+        run: ./scripts/github-action-install-toml-test.bash
+      - name: Run toml-test
+        continue-on-error: true  # Allow failures for now.
+        run: ./scripts/run-toml-test.bash

@@ -1,36 +1,18 @@
+[![Build](https://github.com/winny-/toml-racket/actions/workflows/build.yml/badge.svg)](https://github.com/winny-/toml-racket/actions/workflows/build.yml)
+
 This is a [TOML] parser. It supports TOML **0.2.0**, including
-arrays-of-tables. As of 2014-06-29 it passed all 64 tests in
-[toml-test].
+arrays-of-tables. As of 2022-08-06 it passes 222/325 tests in [toml-test].
 
 [TOML]: https://github.com/toml-lang/toml
 [toml-test]: https://github.com/BurntSushi/toml-test
 
-The format came to my attention after I read that Mozilla [Rust]'s
-package manager is using this format. Since there wasn't currently a
-[Racket] parser for TOML, I thought I'd create one.
+This code is a fork of [Greg Hendershott's TOML parser](https://github.com/greghendershott/toml).  This version is available on pkgs.racket-lang.org.
 
-My motivation was **only** to get more experience using [Parsack] -- a
-Parsec-like monadic parser combinator library implementation in Racket
--- after having used it in a [markdown parser].
+## Installation
 
-[Parsack]: https://github.com/stchang/parsack
-[markdown parser]: https://github.com/greghendershott/markdown
-
-- I did **not** make this available on the Racket package manager.
-
-- I do **not** have plans to update this to support TOML versions
-  newer than 0.2.0.
-  
-- I updated this 2019-08-19 to make it work with a breaking change in
-  [Parsack] that happened many years ago. Beyond that, I do **not**
-  plan to fix bugs or keep it up to date. In fact I might "archive"
-  this repo on GitHub.
-  
-If you would like to fork this (or throw it away and start from
-scratch) you are welcome to do so!
-
-[Racket]: http://www.racket-lang.org
-[Rust]: http://www.rust-lang.org
+```bash
+raco pkg install --auto toml
+```
 
 ## Usage
 

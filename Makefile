@@ -34,5 +34,4 @@ test:
 ## Unique to this project:
 
 toml-test: setup #setup for speed
-	(export GOPATH=~/go; export PATH=$(PWD):~/go:$(PATH); ~/go/bin/toml-test toml-test.rkt)
-
+	toml-test ./toml-test.rkt
