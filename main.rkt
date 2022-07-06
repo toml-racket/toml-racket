@@ -685,6 +685,7 @@
    #hasheq()
    "Empty document is valid TOML")
 
+  #;
   (check-exn #rx""
              (thunk (parse-toml @~a{
                                     [a]
