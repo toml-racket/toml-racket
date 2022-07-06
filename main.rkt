@@ -165,9 +165,22 @@
 
 ;;; Keys for key = val pairs and for tables and arrays of tables
 
+(define $key-component
+  (pdo (v <-
+          (<or> (pdo (s <- (many1 (<or> $alphaNum (oneOf "_-"))))
+                     (return (list->string s)))
+                $string-lit))
+       (return (string->symbol v))))
+
 ;; Valid chars for both normal keys and table keys
+(define (make-$key blame)
+  (<?>
+   (pdo (cs <- (sepBy1 $key-component (char #\.)))
+        (return cs))
+   blame))
+
 (define $common-key-char
-  (<or> $alphaNum (oneOf "~!@#$^&*()_+-`\\|/?><,;:'")))
+  (<or> $alphaNum (oneOf "_-")))
 
 (define $table-key-char
   (<or> $common-key-char (oneOf " ")))
@@ -187,7 +200,7 @@
 
 (define $key/val ;; >> (list/c symbol? stx?)
   (try (pdo $sp
-            (key <- $key)
+            (key <- (make-$key "key"))
             $sp
             (char #\=)
             $sp
@@ -205,7 +218,7 @@
   (string-join (map symbol->string ks) "."))
 
 (define $table-keys ;; >> (listof symbol?)
-  (sepBy1 $table-key (char #\.)))
+  (make-$key "table key"))
 
 (define (table-keys-under parent-keys)
   (pdo (if (empty? parent-keys)
@@ -384,9 +397,23 @@
     [(list) (for/fold ([ht (hasheq)])
                       ([p (in-list pairs)])
               (match-define (list k v) p)
-              (when (hash-has-key? ht k)
-                (conflict-error (cons k (reverse orig-keys)) (hash-ref ht k) v))
-              (hash-set ht k v))]))
+              (define relative (match k [(? symbol? s) (list s)] [z z]))
+              (define start (append relative (reverse orig-keys)) )
+              (define (place ht keypath)
+                (match keypath
+                  [(list sym)
+                   (when (hash-has-key? ht sym)
+                     (conflict-error start (hash-ref ht sym) v))
+                   (hash-set ht sym v)]
+                  [(list k0 krest ...)
+                   (when (and (hash-has-key? ht k0))
+                     (define dest (hash-ref ht k0))
+                     (unless (hash? dest)
+                       (error 'toml
+                              "redefinition of `~a`"
+                              (keys->string start))))
+                   (hash-update ht k0 (curryr place krest) (const (hasheq)))]))
+              (place ht relative))]))
 
 (module+ test
   (check-exn #rx"conflicting values for `a.b.c.x'"
@@ -631,13 +658,37 @@
                    a = 1
                    b = 2
 
-                   [another table]
+                   [another-table]
                    key = 10
 
                    [[table.array]]
                    a = 2
                    b = 4})
-   #hasheq((|another table| . #hasheq((key . 10)))
+   #hasheq((|another-table| . #hasheq((key . 10)))
            (table . #hasheq((key . 5)
                             (array . (#hasheq((a . 1) (b . 2))
-                                      #hasheq((a . 2) (b . 4)))))))))
+                                      #hasheq((a . 2) (b . 4))))))))
+
+  (check-exn #rx""
+             (λ () (parse-toml @~a{
+                                   [a#b]
+                                   x=1
+                                   }))
+             "Invalid character in table name")
+
+  (check-equal?
+   (parse-toml @~a{a.b.c = true})
+   #hasheq((a . #hasheq((b . #hasheq((c . #t)))))))
+
+  (check-equal?
+   (parse-toml "")
+   #hasheq()
+   "Empty document is valid TOML")
+
+  (check-exn #rx""
+             (thunk (parse-toml @~a{
+                                    [a]
+                                    b = 1
+                                    [a]
+                                    c = 2
+                                    }))))
