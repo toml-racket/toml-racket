@@ -147,21 +147,40 @@
 (define (array-of $value-parser)
   (try (pdo $sp
             (char #\[)
-            $spnl (many $blank-or-comment-line)
-            (vs <- (many (pdo $spnl
-                              (v <- $value-parser)
-                              (optional (char #\,))
-                              $spnl (many $blank-or-comment-line)
-                              (return v))))
+            $spnl (many $blank-or-comment-line) $sp
+            (v <- $value-parser)
+            (vs <- (many (try (pdo
+                               $spnl
+                               (char #\,)
+                               $spnl
+                               (many $blank-or-comment-line)
+                               $sp
+                               (vn <- $value-parser)
+                               (return vn)))))
+            $spnl
+            (optional (char #\,))
+            $spnl
+            (many $blank-or-comment-line)
+            $spnl
             (char #\])
-            (return vs))))
+            (return (cons v vs)))))
+
+(define $empty-array
+  (try (pdo $sp
+            (char #\[)
+            $spnl (many $blank-or-comment-line)
+            (char #\])
+            (return null))))
+
 (define $_array
-  (<or> (array-of (<or> $true-lit $false-lit))
-        (array-of $datetime-lit)
-        (array-of $float-lit)
-        (array-of $integer-lit)
-        (array-of $string-lit)
-        (array-of $array)))
+  (<or>
+   $empty-array
+   (array-of (<or> $true-lit $false-lit))
+   (array-of $datetime-lit)
+   (array-of $float-lit)
+   (array-of $integer-lit)
+   (array-of $string-lit)
+   (array-of $array)))
 
 ;;; Keys for key = val pairs and for tables and arrays of tables
 
@@ -466,7 +485,7 @@
   (check-equal? (parse-toml @~a{[a]
                                 [a.b]})
                 '#hasheq((a . #hasheq((b . #hasheq())))))
-;; My own test for duplicate tables
+  ;; My own test for duplicate tables
   (check-exn #rx"redefinition of `a.b'"
              (λ () (parse-toml @~a{[a.b]
                                    [a.C]
@@ -521,6 +540,52 @@
                       (#hasheq((aot0 . 10) (aot1 . 11))
                        #hasheq((aot0 . 20) (aot1 . 21))
                        #hasheq((aot0 . 30) (aot1 . 31))))))))
+  (check-equal? (parse-toml "ar0 = [1,2,3]")
+                #hasheq((ar0 . (1 2 3)))
+                "ar0 = [1,2,3]")
+
+  (check-equal? (parse-toml "ar0 = [ 1, 2, 3] ")
+                #hasheq((ar0 . (1 2 3)))
+                "ar0 = [ 1, 2, 3] ")
+
+  (check-equal? (parse-toml "ar0 = [ ]")
+                #hasheq((ar0 . ()))
+                "ar0 = [ ]")
+
+
+  (check-equal? (parse-toml @~a{array2 = [
+                                          1
+                                          ]})
+                #hasheq((array2 . (1)))
+                "defining a single-array with newlines")
+
+
+  (check-equal? (parse-toml @~a{
+                                array2 = [
+                                           1, # test
+                                           ]
+                                })
+                #hasheq((array2 . (1))))
+
+  (check-equal? (parse-toml @~a{
+                                array2 = [
+                                           1, # comment
+                                           2,
+                                           3,
+                                           ]
+                                })
+                #hasheq((array2 . (1 2 3))))
+
+  (check-equal? (parse-toml @~a{
+                                array2 = [ #comment
+                                           1, #comment
+                                           2,
+                                           3,
+                                           ] #comment
+                                })
+                #hasheq((array2 . (1 2 3))))
+
+
   (check-equal?
    (parse-toml @~a{# Comment blah blah
                    # Comment blah blah
@@ -536,7 +601,7 @@
                               2,
                               3,
                               ] #comment
-                   nested-array = [[1 2 3][4 5 6]] #comment
+                   nested-array = [[1, 2, 3], [4, 5, 6]] #comment
 
                    [key0.key1] #comment
                    x = 1
@@ -679,6 +744,12 @@
   (check-equal?
    (parse-toml @~a{a.b.c = true})
    #hasheq((a . #hasheq((b . #hasheq((c . #t)))))))
+
+  (check-exn #rx""
+             (thunk
+              (parse-toml @~a{
+                              x = [1 2 3]
+                              })))
 
   (check-equal?
    (parse-toml "")
