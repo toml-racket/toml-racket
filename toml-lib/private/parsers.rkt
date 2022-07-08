@@ -3,6 +3,7 @@
 (require racket/list
          racket/function
          racket/match
+         racket/math
 
          "parsack.rkt"
          "misc.rkt"
@@ -58,11 +59,36 @@
              (noneOf "\"\\"))
        "character or escape character"))
 
-(define $string-lit
+(define $basic-string
   (<?> (try (pdo (char #\")
                  (cs <- (manyUntil $string-char (char #\")))
                  (return (list->string cs))))
-       "double-quoted string"))
+       "multi-line basicstring"))
+
+(define $ml-basic-string
+  (<?> (try (pdo (string "\"\"\"")
+                 (cs <- (manyUntil $string-char (string "\"\"\"")))
+                 (return (list->string cs))))
+       "multi-line basic string"))
+
+(define $lit-string
+  (<?> (try (pdo (char #\')
+                 (cs <- (manyUntil $anyChar (char #\')))
+                 (return (list->string cs))))
+       "literal string"))
+
+(define $ml-lit-string
+  (<?> (try (pdo (string "'''")
+                 (cs <- (manyUntil $anyChar (string "'''")))
+                 (return (list->string cs))))
+       "multi-line literal string"))
+
+(define $string
+  (<?> (try (<or> $basic-string
+                  $ml-basic-string
+                  $lit-string
+                  $ml-lit-string))
+       "string"))
 
 (define $optional-sign
   (<or> (>> (char #\-) (return '(#\-)))
@@ -82,7 +108,7 @@
    (v <- $inner)
    (return (list->string v))))
 
-(define $dec-int-lit
+(define $dec-int
   (<?> (try (pdo
              (sign <- $optional-sign)
              (<or> (>> (char #\0) (return 0))
@@ -93,21 +119,21 @@
                                     [_ n])))))))
        "decimal integer"))
 
-(define $hex-int-lit
+(define $hex-int
   (<?> (try (pdo
              (string "0x")
              (s <- (make-$underscore-separated $hexDigit))
              (return (string->number s 16))))
        "hex integer"))
 
-(define $bin-int-lit
+(define $bin-int
   (<?> (try (pdo
              (string "0b")
              (s <- (make-$underscore-separated (oneOf "01")))
              (return (string->number s 2))))
        "binary integer"))
 
-(define $oct-int-lit
+(define $oct-int
   (<?> (try (pdo
              (string "0o")
              (s <- (make-$underscore-separated (oneOf "01234567")))
@@ -115,29 +141,66 @@
        "binary integer"))
 
 
-(define $integer-lit
-  (<?> (try (<or> $hex-int-lit
-                  $bin-int-lit
-                  $oct-int-lit
-                  $dec-int-lit))
+(define $integer
+  (<?> (try (<or> $hex-int
+                  $bin-int
+                  $oct-int
+                  $dec-int))
        "integer"))
 
-(define $float-lit
-  (<?> (try (pdo (ss <- $optional-sign)
-                 (xs <- (many1 $digit))
-                 (char #\.)
-                 (ys <- (many1 $hexDigit))
-                 (return (string->number (list->string (append ss xs '(#\.) ys))))))
+(define $special-float
+  (<?> (try (pdo (sign <- $optional-sign)
+                 (<or> (>> (string "nan")
+                           (return (match sign
+                                    [(list #\-) -nan.0]
+                                    [_  +nan.0])))
+                       (>> (string "inf")
+                           (return (match sign
+                                     [(list #\-) -inf.0]
+                                     [_ +inf.0]))))))
+       "Special float (nan/inf)"))
+
+(define $zero-prefixable-int
+  (<?> (try (pdo (s <- (make-$underscore-separated $digit))
+                 (return (string->number s))))
+       "Zero prefixable integer"))
+
+(define $float
+  (<?>
+   (try
+    (<or> $special-float
+          (pdo (i <- $dec-int)
+               (<or> (try (pdo (exp <- $exp)
+                               (return (string->number (format "~ae~a" i exp)))))
+                     (try (pdo (char #\.)
+                               (f <- $zero-prefixable-int)
+                               (exp <- (<or> $exp (return null)))
+                               (return (string->number
+                                        (format "~a.~a~a"
+                                                i
+                                                f (if (null? exp)
+                                                      ""
+                                                      (format "e~a" exp)))))))))))
        "float"))
 
-(define $true-lit  (pdo (string "true")  (return #t)))
-(define $false-lit (pdo (string "false") (return #f)))
+(define $exp
+  (<?> (try (pdo
+             (char #\e)
+             (sign <- $optional-sign)
+             (i <- $zero-prefixable-int)
+             (return (match sign
+                       [(list #\-) (- i)]
+                       [_ i]))))
+       "Float exponent"))
+
+(define $true  (pdo (string "true")  (return #t)))
+(define $false (pdo (string "false") (return #f)))
 
 (define ->num (compose string->number list->string list))
 (define $4d (pdo-seq $digit $digit $digit $digit #:combine-with ->num))
 (define $2d (pdo-seq $digit $digit #:combine-with ->num))
 
-(define $datetime-lit
+(define $datetime
   ;; 1979-05-27T07:32:00Z
   (try (pdo (yr <- $4d) (char #\-) (mo <- $2d) (char #\-) (dy <- $2d)
             (char #\T)
@@ -148,12 +211,12 @@
 (define ($array state) ($_array state)) ;; "forward decl"
 
 (define $val
-  (<or> $true-lit
-        $false-lit ;before $numeric-lit. "fa" in "false" could be hex
-        $datetime-lit ;before $numeric-lit. dates start with number
-        $integer-lit
-        $float-lit
-        $string-lit
+  (<or> $true
+        $false ;before $numeric. "fa" in "false" could be hex
+        $datetime ;before $numeric. dates start with number
+        $float
+        $integer
+        $string
         $array))
 
 ;; TOML arrays require items to have same type. To handle this with
@@ -190,11 +253,11 @@
 (define $_array
   (<or>
    $empty-array
-   (array-of (<or> $true-lit $false-lit))
-   (array-of $datetime-lit)
-   (array-of $float-lit)
-   (array-of $integer-lit)
-   (array-of $string-lit)
+   (array-of (<or> $true $false))
+   (array-of $datetime)
+   (array-of $float)
+   (array-of $integer)
+   (array-of $string)
    (array-of $array)))
 
 ;;; Keys for key = val pairs and for tables and arrays of tables
@@ -204,7 +267,7 @@
        (v <-
           (<or> (pdo (s <- (many1 (<or> $alphaNum (oneOf "_-"))))
                      (return (list->string s)))
-                $string-lit))
+                $string))
        $sp
        (return (string->symbol v))))
 
