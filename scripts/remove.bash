@@ -12,6 +12,6 @@ rem() {
     fi
 }
 
-rem tobl-compliance
-rem toml-lib
 rem toml
+rem toml-compliance
+rem toml-lib
