@@ -4,8 +4,8 @@
 (require racket/function
          racket/format
 
-         "../parsers.rkt"
-         "../parsack.rkt")
+         "../parsack.rkt"
+         "../parsers/main.rkt")
 
 (module+ test
   (require rackunit)

@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require "private/parsers.rkt")
+(require "private/parsers/main.rkt")
 
 (provide parse-toml)
 

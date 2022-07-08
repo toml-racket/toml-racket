@@ -82,53 +82,9 @@
                       (#hasheq((aot0 . 10) (aot1 . 11))
                        #hasheq((aot0 . 20) (aot1 . 21))
                        #hasheq((aot0 . 30) (aot1 . 31))))))))
-  (check-equal? (parse-toml "ar0 = [1,2,3]")
-                #hasheq((ar0 . (1 2 3)))
-                "ar0 = [1,2,3]")
 
-  (check-equal? (parse-toml "ar0 = [ 1, 2, 3] ")
-                #hasheq((ar0 . (1 2 3)))
-                "ar0 = [ 1, 2, 3] ")
-
-  (check-equal? (parse-toml "ar0 = [ ]")
-                #hasheq((ar0 . ()))
-                "ar0 = [ ]")
-
-
-  (check-equal? (parse-toml @~a{array2 = [
-                                          1
-                                          ]})
-                #hasheq((array2 . (1)))
-                "defining a single-array with newlines")
-
-
-  (check-equal? (parse-toml @~a{
-                                array2 = [
-                                           1, # test
-                                           ]
-                                })
-                #hasheq((array2 . (1))))
-
-  (check-equal? (parse-toml @~a{
-                                array2 = [
-                                           1, # comment
-                                           2,
-                                           3,
-                                           ]
-                                })
-                #hasheq((array2 . (1 2 3))))
-
-  (check-equal? (parse-toml @~a{
-                                array2 = [ #comment
-                                           1, #comment
-                                           2,
-                                           3,
-                                           ] #comment
-                                })
-                #hasheq((array2 . (1 2 3))))
-
-
-  (check-equal?
+  (test-equal?
+   "Parse a long toml document"
    (parse-toml @~a{# Comment blah blah
                    # Comment blah blah
 
