@@ -293,10 +293,10 @@
                               x = [1 2 3]
                               })))
 
-  (check-equal?
+  (test-equal?
+   "Empty document is valid TOML"
    (parse-toml "")
-   #hasheq()
-   "Empty document is valid TOML")
+   #hasheq())
 
   #;
   (check-exn #rx""

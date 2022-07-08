@@ -1,7 +1,8 @@
 [![Build](https://github.com/winny-/toml-racket/actions/workflows/build.yml/badge.svg)](https://github.com/winny-/toml-racket/actions/workflows/build.yml)
 
 This is a [TOML] parser. It supports TOML **0.2.0**, including
-arrays-of-tables. As of 2022-08-06 it passes 222/325 tests in [toml-test].
+arrays-of-tables. As of 2022-08-06 it passes 266/325 tests in [toml-test]
+(testing against version 0.4.0).
 
 [TOML]: https://github.com/toml-lang/toml
 [toml-test]: https://github.com/BurntSushi/toml-test

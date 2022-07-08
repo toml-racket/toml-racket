@@ -66,12 +66,60 @@
 
 (define $optional-sign
   (<or> (>> (char #\-) (return '(#\-)))
+        (>> (char #\+) (return '(#\+)))
         (return '())))
 
+(define (make-$underscore-separated $parser)
+  (define $inner
+    (pdo (v <- $parser)
+         (w <- (<or>
+                (pdo (optional (char #\_))
+                     (i <- $inner)
+                     (return i))
+                (return null)))
+         (return (cons v w))))
+  (pdo
+   (v <- $inner)
+   (return (list->string v))))
+
+(define $dec-int-lit
+  (<?> (try (pdo
+             (sign <- $optional-sign)
+             (<or> (>> (char #\0) (return 0))
+                   (pdo (s <- (make-$underscore-separated $digit))
+                        (return (let ([n (string->number s)])
+                                  (match sign
+                                    [(list #\-) (- n)]
+                                    [_ n])))))))
+       "decimal integer"))
+
+(define $hex-int-lit
+  (<?> (try (pdo
+             (string "0x")
+             (s <- (make-$underscore-separated $hexDigit))
+             (return (string->number s 16))))
+       "hex integer"))
+
+(define $bin-int-lit
+  (<?> (try (pdo
+             (string "0b")
+             (s <- (make-$underscore-separated (oneOf "01")))
+             (return (string->number s 2))))
+       "binary integer"))
+
+(define $oct-int-lit
+  (<?> (try (pdo
+             (string "0o")
+             (s <- (make-$underscore-separated (oneOf "01234567")))
+             (return (string->number s 8))))
+       "binary integer"))
+
+
 (define $integer-lit
-  (<?> (try (pdo (ss <- $optional-sign)
-                 (xs <- (many1 $hexDigit))
-                 (return (string->number (list->string (append ss xs))))))
+  (<?> (try (<or> $hex-int-lit
+                  $bin-int-lit
+                  $oct-int-lit
+                  $dec-int-lit))
        "integer"))
 
 (define $float-lit
@@ -103,8 +151,8 @@
   (<or> $true-lit
         $false-lit ;before $numeric-lit. "fa" in "false" could be hex
         $datetime-lit ;before $numeric-lit. dates start with number
-        $float-lit
         $integer-lit
+        $float-lit
         $string-lit
         $array))
 
@@ -152,10 +200,12 @@
 ;;; Keys for key = val pairs and for tables and arrays of tables
 
 (define $key-component
-  (pdo (v <-
+  (pdo $sp
+       (v <-
           (<or> (pdo (s <- (many1 (<or> $alphaNum (oneOf "_-"))))
                      (return (list->string s)))
                 $string-lit))
+       $sp
        (return (string->symbol v))))
 
 ;; Valid chars for both normal keys and table keys
