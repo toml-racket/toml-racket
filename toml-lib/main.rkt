@@ -8,7 +8,7 @@
          racket/list
          racket/match
          racket/string
-         "parsack.rkt")
+         "private/parsack.rkt")
 
 (provide parse-toml)
 

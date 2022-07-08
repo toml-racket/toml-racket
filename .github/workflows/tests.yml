@@ -13,7 +13,7 @@ jobs:
       - name: Install Racket
         uses: Bogdanp/setup-racket@v0.11
       - name: Install Package and its Dependencies
-        run: raco pkg install --auto --batch
+        run: ./scripts/install.bash
       - name: Run tests
         run: ./scripts/test.bash
   toml-compliance:
@@ -24,7 +24,7 @@ jobs:
       - name: Install Racket
         uses: Bogdanp/setup-racket@v0.11
       - name: Install Package and its Dependencies
-        run: raco pkg install --auto --batch
+        run: ./scripts/install.bash
       - name: Install toml-test
         run: ./scripts/github-action-install-toml-test.bash
       - name: Run toml-test

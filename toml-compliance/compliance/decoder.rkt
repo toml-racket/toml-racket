@@ -7,7 +7,7 @@
          racket/match
          racket/port
          racket/list
-         "main.rkt")
+         toml)
 
 (module+ main
   (displayln
