@@ -84,7 +84,6 @@
                (parse-toml "x = [[[]]]")
                #hasheq((x . [[[]]])))
 
-  #;
   (test-equal? "Array"
                (parse-toml "x = [1,2,[true,false]]")
                #hasheq((x . [1 2 [#t #f]])))

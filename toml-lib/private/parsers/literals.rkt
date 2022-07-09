@@ -127,8 +127,8 @@
   (<?> (try (pdo (sign <- $optional-sign)
                  (<or> (>> (string "nan")
                            (return (match sign
-                                    [(list #\-) -nan.0]
-                                    [_  +nan.0])))
+                                     [(list #\-) -nan.0]
+                                     [_  +nan.0])))
                        (>> (string "inf")
                            (return (match sign
                                      [(list #\-) -inf.0]
@@ -156,7 +156,7 @@
                                                 f (if (null? exp)
                                                       ""
                                                       (format "e~a" exp)))))))))))
-       "float"))
+   "float"))
 
 (define $exp
   (<?> (try (pdo
@@ -183,48 +183,36 @@
             (char #\Z)
             (return (date sc mn hr dy mo yr 0 0 #f 0)))))
 
-;; TOML arrays require items to have same type. To handle this with
-;; parsing (vs. semantically), we insist that same literal parser be
-;; used for all items.
-(define (array-of $value-parser)
-  (try (pdo $sp
-            (char #\[)
-            $spnl (many $blank-or-comment-line) $sp
-            (v <- $value-parser)
-            (vs <- (many (try (pdo
-                               $spnl
-                               (char #\,)
-                               $spnl
-                               (many $blank-or-comment-line)
-                               $sp
-                               (vn <- $value-parser)
-                               (return vn)))))
-            $spnl
-            (optional (char #\,))
-            $spnl
-            (many $blank-or-comment-line)
-            $spnl
-            (char #\])
-            (return (cons v vs)))))
-
-(define $empty-array
-  (try (pdo $sp
-            (char #\[)
-            $spnl (many $blank-or-comment-line)
-            (char #\])
-            (return null))))
-
-(define ($array state) ($_array state)) ;; "forward decl"
-
-(define $_array
-  (<or>
-   $empty-array
-   (array-of (<or> $true $false))
-   (array-of $datetime)
-   (array-of $float)
-   (array-of $integer)
-   (array-of $string)
-   (array-of $array)))
+(define $array
+  (<?>
+   (<or>
+    (try
+     (pdo $sp
+          (char #\[)
+          $spnl (many $blank-or-comment-line) $sp
+          (v <- $val)
+          (vs <- (many (try (pdo
+                             $spnl
+                             (char #\,)
+                             $spnl
+                             (many $blank-or-comment-line)
+                             $sp
+                             (vn <- $val)
+                             (return vn)))))
+          $spnl
+          (optional (char #\,))
+          $spnl
+          (many $blank-or-comment-line)
+          $spnl
+          (char #\])
+          (return (cons v vs))))
+    (try
+     (pdo $sp
+          (char #\[)
+          $spnl (many $blank-or-comment-line)
+          (char #\])
+          (return null))))
+   "Array"))
 
 (define $val
   (<or> $true
