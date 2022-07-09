@@ -31,7 +31,7 @@ jobs:
         continue-on-error: true  # Allow failures for now.
         run: ./scripts/run-toml-test.bash -n -l /tmp/toml-test-output.txt
       - name: Upload test results
-        run: actions/upload-artifact@v3
-          with:
-            name: toml-test-output
-            path: /tmp/toml-test-output.txt
+        uses: actions/upload-artifact@v3
+        with:
+          name: toml-test-output
+          path: /tmp/toml-test-output.txt
