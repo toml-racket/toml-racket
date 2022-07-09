@@ -129,6 +129,18 @@
                #hasheq((array2 . (1 2 3))))
 
   (test-equal?
+   "Parse date-time with various delimiters"
+   (parse-toml @~a{
+                   a = 1987-07-05 17:45:00Z
+                   b = 1987-07-05t17:45:00z
+                   c = 1987-07-05T17:45:00z
+                   })
+   (let ([t (date 0 45 17 5 7 1987 0 0 #f 0)])
+     `#hasheq((a . ,t)
+              (b . ,t)
+              (c . ,t))))
+
+  (test-equal?
    "Parse many comments within an array literal"
    (parse-toml @~a{
                    array2 = [ #comment

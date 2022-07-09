@@ -178,9 +178,9 @@
 (define $datetime
   ;; 1979-05-27T07:32:00Z
   (try (pdo (yr <- $4d) (char #\-) (mo <- $2d) (char #\-) (dy <- $2d)
-            (char #\T)
+            (oneOf "Tt ")
             (hr <- $2d) (char #\:) (mn <- $2d) (char #\:) (sc <- $2d)
-            (char #\Z)
+            (oneOf "Zz")
             (return (date sc mn hr dy mo yr 0 0 #f 0)))))
 
 (define $array
