@@ -1,4 +1,5 @@
 #lang setup/infotab
 (define deps '("toml-lib"
-               "toml-compliance"))
+               "toml-compliance"
+               "base"))
 
