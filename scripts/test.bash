@@ -4,4 +4,4 @@ set -eu -o pipefail
 
 cd "${0%/*}/.."
 
-raco test .
+raco test --make -j "$(nproc)" .
