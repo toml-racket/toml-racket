@@ -13,9 +13,7 @@
   (displayln
    (jsexpr->string
     (type-jsexpr
-     (parse-toml
-      (port->string
-       (current-input-port)))))))
+     (parse-toml (current-input-port))))))
 
 (define (type-jsexpr v)
   (match v

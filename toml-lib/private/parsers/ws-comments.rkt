@@ -7,7 +7,9 @@
 
          "../parsack.rkt"
          "../misc.rkt"
-         "../stx.rkt")
+         "../stx.rkt"
+
+         "./shared.rkt")
 
 (provide (all-defined-out))
 
@@ -18,17 +20,30 @@
   (<?> (many $space-char)
        "zero or more spaces or tabs"))
 
+(define $nl
+  (<?> (<or> (string "\r\n")
+             (char #\newline))
+       "Newline (LF or CRLF"))
+
 (define $spnl
-  (<?> (pdo $sp (optional (char #\return)) (optional $newline) $sp
+  (<?> (pdo $sp (optional $nl) $sp
             (return null))
        "zero or more spaces, and optional newline plus zero or more spaces"))
 
 (define $blank-line
-  (<?> (try (pdo $sp $newline (return (void))))
+  (<?> (try (pdo $sp $nl (return (void))))
        "blank line"))
 
+(define $comment-char
+  (<?> (<or> (char #\tab)
+             (satisfy (λ (c)
+                        ;; Between space ( ) and tilde (~).
+                        (<= #x20 (char->integer c) #x7e)))
+             $non-ascii)
+       "comment character"))
+
 (define $comment
-  (<?> (try (pdo $sp (char #\#) (manyUntil $anyChar $newline)
+  (<?> (try (pdo $sp (char #\#) (manyUntil $comment-char $nl)
                  (return null)))
        "comment"))
 

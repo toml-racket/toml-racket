@@ -4,17 +4,20 @@
          racket/function
          racket/match
          racket/math
+         racket/port
 
          "../parsack.rkt"
          "../misc.rkt"
          "../stx.rkt"
 
          "literals.rkt"
-         "ws-comments.rkt")
+         "ws-comments.rkt"
+         "shared.rkt")
 
 (provide exn:fail:parsack?
          (all-from-out "literals.rkt")
          (all-from-out "ws-comments.rkt")
+         (all-from-out "shared.rkt")
          (all-defined-out))
 
 ;;; Keys for key = val pairs and for tables and arrays of tables
@@ -156,5 +159,14 @@
 ;;; to give the result to `jsexpr->string`. EXCEPTION: TOML datetimes
 ;;; are parsed to Racket `date` struct values, which do NOT satisfy
 ;;; `jsexpr?`.
-(define (parse-toml s) ;; string? -> almost-jsexpr?
-  (stx->dat (parse-result $toml-document (string-append s "\n\n\n"))))
+(define (parse-toml input) ;; string? -> almost-jsexpr?
+  (define toml-bytes
+    (bytes-append
+     (cond [(input-port? input) (port->bytes input)]
+           [(bytes? input) input]
+           [(string? input) (string->bytes/utf-8 input)]
+           [else (raise-argument-error 'parse-toml "input is not an input-port?, bytes?, or string?." input)])
+     ;; XXX Parser should not require these newlines.
+     #"\n\n\n"))
+  (stx->dat (parse-result $toml-document
+                          (open-input-bytes toml-bytes))))
