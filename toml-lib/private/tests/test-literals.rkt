@@ -76,6 +76,11 @@
                (parse-toml "x = 'foo bar baz'")
                #hasheq((x . "foo bar baz")))
 
+  (test-exn "Bad parse Lit. Str 'foo bar baz'"
+            #rx""
+            (thunk
+             (parse-toml "x = 'foo\r\nbar\nbaz'")))
+
   (test-equal? "Escaped Str \"foo bar baz\""
                (parse-toml "x = \"foo bar baz\"")
                #hasheq((x . "foo bar baz")))

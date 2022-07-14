@@ -11,6 +11,14 @@
 
 (provide (all-defined-out))
 
+(define (char-range a b)
+  (cond
+    [(char<? b a) (char-range b a)]
+    [else
+     (define (in-range? c)
+       (char<=? a c b))
+     (<?> (satisfy in-range?) (format "Character between ~a,~a inclusive" a b))]))
+
 (define (has-bits-set? mask)
   (satisfy
    (λ (i)

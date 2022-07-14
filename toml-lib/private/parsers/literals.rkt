@@ -9,7 +9,8 @@
          "../misc.rkt"
          "../stx.rkt"
 
-         "ws-comments.rkt")
+         "ws-comments.rkt"
+         "shared.rkt")
 
 (provide (all-defined-out))
 
@@ -34,6 +35,13 @@
              (noneOf "\"\\"))
        "character or escape character"))
 
+(define $lit-string-char
+  (<?> (<or> (char #\tab)
+             (char-range #\space #\&)
+             (char-range #\( #\~)
+             $non-ascii)
+       "literal string char"))
+
 (define $basic-string
   (<?> (try (pdo (char #\")
                  (cs <- (manyUntil $string-char (char #\")))
@@ -48,7 +56,7 @@
 
 (define $lit-string
   (<?> (try (pdo (char #\')
-                 (cs <- (manyUntil $anyChar (char #\')))
+                 (cs <- (manyUntil $lit-string-char (char #\')))
                  (return (list->string cs))))
        "literal string"))
 
