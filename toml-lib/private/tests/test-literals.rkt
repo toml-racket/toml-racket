@@ -64,6 +64,10 @@
                (parse-toml "x = 1e5")
                #hasheq((x . 1e5)))
 
+  (test-equal? "Lit. float 1E5"
+               (parse-toml "x = 1E5")
+               #hasheq((x . 1E5)))
+
   (test-equal? "Lit. float 1.23e5"
                (parse-toml "x = 1.23e5")
                #hasheq((x . 1.23e5)))

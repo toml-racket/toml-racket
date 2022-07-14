@@ -7,6 +7,8 @@
          racket/match
          racket/port
          racket/list
+         racket/math
+         racket/string
          toml)
 
 (module+ main
@@ -21,7 +23,11 @@
     [#f (hasheq 'type "bool" 'value "false")]
     [(? string? v) (hasheq 'type "string" 'value v)]
     [(? exact-integer? v) (hasheq 'type "integer" 'value (~a v))]
-    [(? real? v) (hasheq 'type "float" 'value (~a v))]
+    [(? real? v) (hasheq 'type "float"
+                         'value (cond
+                                  [(nan? v) "nan"]
+                                  [(infinite? v) (string-replace (~a v) ".0" "")]
+                                  [else (~a v)]))]
     [(? date? d) (hasheq 'type "datetime"
                          'value
                          (parameterize ([date-display-format 'iso-8601])

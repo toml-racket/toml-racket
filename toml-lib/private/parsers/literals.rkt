@@ -168,7 +168,7 @@
 
 (define $exp
   (<?> (try (pdo
-             (char #\e)
+             (oneOf "eE")
              (sign <- $optional-sign)
              (i <- $zero-prefixable-int)
              (return (match sign
