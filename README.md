@@ -1,4 +1,5 @@
-[![Tests](https://github.com/winny-/toml-racket/actions/workflows/tests.yml/badge.svg)](https://github.com/winny-/toml-racket/actions/workflows/tests.yml) 
+[![Tests](https://github.com/winny-/toml-racket/actions/workflows/tests.yml/badge.svg)](https://github.com/winny-/toml-racket/actions/workflows/tests.yml) [![TOML Compliance](https://github.com/winny-/toml-racket/actions/workflows/compliance.yml/badge.svg)](https://github.com/winny-/toml-racket/actions/workflows/compliance.yml) [![raco pkg install toml](https://img.shields.io/badge/raco%20pkg%20install-toml-purple)](https://pkgs.racket-lang.org/package/toml)
+
 
 This is a [TOML] parser. It supports TOML **0.2.0**, including
 arrays-of-tables. As of 2022-08-06 it passes 266/325 tests in [toml-test]
