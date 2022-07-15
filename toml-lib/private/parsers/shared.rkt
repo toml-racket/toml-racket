@@ -5,11 +5,21 @@
          racket/match
          racket/math
 
+
          "../parsack.rkt"
          "../misc.rkt"
-         "../stx.rkt")
+         "../stx.rkt"
+
+         (for-syntax racket/base
+                     racket/list))
 
 (provide (all-defined-out))
+
+(define-syntax (repetition stx)
+  (syntax-case stx ()
+    [(_ parser n)
+     (let ([guts (datum->syntax stx (make-list (syntax->datum #'n) #'parser))])
+       #`(pdo-seq #,@guts))]))
 
 (define (char-range a b)
   (cond

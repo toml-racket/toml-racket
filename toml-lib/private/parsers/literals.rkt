@@ -14,26 +14,41 @@
 
 (provide (all-defined-out))
 
-
-(define $string-char
-  (<?> (<or> (pdo
-              (char #\\)
-              (<or> (>> (char #\b) (return #\backspace))
-                    (>> (char #\n) (return #\newline))
-                    (>> (char #\f) (return #\page))
-                    (>> (char #\r) (return #\return))
-                    (>> (char #\t) (return #\tab))
-                    (>> (char #\\) (return #\\))
-                    (>> (char #\") (return #\"))
-                    (>> (char #\/) (return #\/))
+(define $escape
+  (<?>
+   (pdo (char #\\)
+        (<or> (>> (char #\") (return #\"))
+              (>> (char #\\) (return #\\))
+              (>> (char #\b) (return #\backspace))
+              (>> (char #\f) (return #\page))
+              (>> (char #\n) (return #\newline))
+              (>> (char #\r) (return #\return))
+              (>> (char #\t) (return #\tab))
                     (pdo (oneOf "uU")
-                         (cs <- (many $hexDigit))
+                         (cs <- (<or> (try (repetition $hexDigit 8))
+                                      (repetition $hexDigit 4)))
                          (return
                           (integer->char (string->number (list->string cs)
-                                                         16))))
-                    ))
-             (noneOf "\"\\"))
+                                                         16))))))
+   "String escape sequence"))
+
+(define $basic-char
+  (<?> (<or> $escape
+             $space-char
+             (char #\!)
+             (char-range #\# #\[)
+             (char-range #\] #\~)
+             $non-ascii)
        "character or escape character"))
+
+(define $ml-content
+  (<?> (pdo (optional (try (pdo (char #\\)
+                                $nl
+                                (return null))))
+            (c <- (<or> $nl
+                        $basic-char))
+            (return c))
+       "multiline basic string content"))
 
 (define $lit-string-char
   (<?> (<or> (char #\tab)
@@ -42,15 +57,21 @@
              $non-ascii)
        "literal string char"))
 
+(define $ll-content
+  (<?> (<or> $nl
+             $lit-string-char)
+       "multiline literal string content"))
+
 (define $basic-string
   (<?> (try (pdo (char #\")
-                 (cs <- (manyUntil $string-char (char #\")))
+                 (cs <- (manyUntil $basic-char (char #\")))
                  (return (list->string cs))))
        "multi-line basicstring"))
 
 (define $ml-basic-string
   (<?> (try (pdo (string "\"\"\"")
-                 (cs <- (manyUntil $string-char (string "\"\"\"")))
+                 (optional $nl)
+                 (cs <- (manyUntil $ml-content (string "\"\"\"")))
                  (return (list->string cs))))
        "multi-line basic string"))
 
@@ -62,15 +83,16 @@
 
 (define $ml-lit-string
   (<?> (try (pdo (string "'''")
-                 (cs <- (manyUntil $anyChar (string "'''")))
+                 (optional $nl)
+                 (cs <- (manyUntil $ll-content (string "'''")))
                  (return (list->string cs))))
        "multi-line literal string"))
 
 (define $string
-  (<?> (try (<or> $basic-string
-                  $ml-basic-string
-                  $lit-string
-                  $ml-lit-string))
+  (<?> (try (<or> $ml-basic-string
+                  $basic-string
+                  $ml-lit-string
+                  $lit-string))
        "string"))
 
 (define $optional-sign

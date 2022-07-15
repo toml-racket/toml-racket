@@ -12,6 +12,11 @@
 (module+ test
   (require rackunit)
 
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; Float
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
   (test-equal? "$exp parses e-12"
                (parse-result $exp "e-12")
                -12)
@@ -23,27 +28,6 @@
   (test-equal? "$val parses 1.2345"
                (parse-result $float "1.2345")
                1.2345)
-
-  (test-equal? "Oct Lit TOML 0o01234567"
-               (parse-toml "oct1 = 0o01234567")
-               #hasheq((oct1 . #o1234567)))
-
-  (test-equal? "Bin Lit TOML (1010)"
-               (parse-toml "x = 0b1010")
-               #hasheq((x . #b1010)))
-
-  (test-equal? "Neg Dec Lit TOML (-1_2_345)"
-               (parse-toml "x = -1_2_345")
-               #hasheq((x . -12345)))
-
-  (test-equal? "Hex Lit TOML (0xdeadbeef"
-               (parse-toml "x = 0xdead_beef")
-               #hasheq((x .  #xdeadbeef)))
-
-  (test-exn "BAD Dec Lit TOML (123_)"
-            #rx""
-            (thunk (parse-toml "x = 123_")))
-
   (test-equal? "Lit. float -inf"
                (parse-toml "x = -inf")
                #hasheq((x . -inf.0)))
@@ -76,6 +60,50 @@
                (parse-toml "x = 1.23e-5")
                #hasheq((x . 1.23e-5)))
 
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; Integer
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (test-equal? "Oct Lit TOML 0o01234567"
+               (parse-toml "oct1 = 0o01234567")
+               #hasheq((oct1 . #o1234567)))
+
+  (test-equal? "Bin Lit TOML (1010)"
+               (parse-toml "x = 0b1010")
+               #hasheq((x . #b1010)))
+
+  (test-equal? "Neg Dec Lit TOML (-1_2_345)"
+               (parse-toml "x = -1_2_345")
+               #hasheq((x . -12345)))
+
+  (test-equal? "Hex Lit TOML (0xdeadbeef"
+               (parse-toml "x = 0xdead_beef")
+               #hasheq((x .  #xdeadbeef)))
+
+  (test-exn "BAD Dec Lit TOML (123_)"
+            #rx""
+            (thunk (parse-toml "x = 123_")))
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; String
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (test-exn "basic Str does not accept 3 hexdigit unicode escape"
+            #rx""
+            (thunk (parse-toml "x = \"\\u0d8\"")))
+
+  (test-equal? "basic Str Accepts 4 hexdigit unicode escape"
+               (parse-toml "x = \"\\u00d8\"")
+               #hasheq((x . "Ø")))
+
+  (test-equal? "basic Str Accepts 8 hexdigit unicode escape"
+               (parse-toml "x = \"\\u000000d8\"")
+               #hasheq((x . "Ø")))
+
+  (test-equal? "Escaped Str \"foo bar baz\""
+               (parse-toml "x = \"foo bar baz\"")
+               #hasheq((x . "foo bar baz")))
+
   (test-equal? "Lit. Str 'foo bar baz'"
                (parse-toml "x = 'foo bar baz'")
                #hasheq((x . "foo bar baz")))
@@ -85,9 +113,45 @@
             (thunk
              (parse-toml "x = 'foo\r\nbar\nbaz'")))
 
-  (test-equal? "Escaped Str \"foo bar baz\""
-               (parse-toml "x = \"foo bar baz\"")
-               #hasheq((x . "foo bar baz")))
+  (test-exn "Bad parse Str \"foo bar baz\""
+            #rx""
+            (thunk
+             (parse-toml "x = \"foo\r\nbar\nbaz\"")))
+
+  (test-equal? "multiline string parses"
+               (parse-toml "x = \"\"\"hello\nworld\"\"\"")
+               #hasheq((x . "hello\nworld")))
+
+  (test-equal? "multiline string opener eats following newline"
+               (parse-toml "x = \"\"\"\nhello\nworld\"\"\"")
+               #hasheq((x . "hello\nworld")))
+
+  (test-equal? "Multiline basic string"
+               (parse-toml #<<END
+x = """
+hello
+world
+"""
+END
+                           )
+               `#hasheq((x . , @~a{
+                                   hello
+                                   world
+
+                                   })))
+
+  (test-equal? "Multiline basic string with escaped newline"
+               (parse-toml "x = \"\"\"hello\\\nworld\"\"\"")
+               `#hasheq((x . "helloworld")))
+
+  #;
+  (test-equal? "multiline basic string with tricky escape"
+               (parse-toml @~a{multiline_end_esc = """When will it end? \"""...""\" should be here\""""})
+               #hasheq((multiline_end_esc . "When will it end? \"\"\"...\"\"\" should be here\"")))
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; Array
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   (test-equal? "Empty array"
                (parse-toml "x = [[[]]]")
@@ -138,6 +202,21 @@
                #hasheq((array2 . (1 2 3))))
 
   (test-equal?
+   "Parse many comments within an array literal"
+   (parse-toml @~a{
+                   array2 = [ #comment
+                              1, #comment
+                              2,
+                              3,
+                              ] #comment
+                   })
+   #hasheq((array2 . (1 2 3))))
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; Date
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (test-equal?
    "Parse date-time with various delimiters"
    (parse-toml @~a{
                    a = 1987-07-05 17:45:00Z
@@ -147,15 +226,4 @@
    (let ([t (date 0 45 17 5 7 1987 0 0 #f 0)])
      `#hasheq((a . ,t)
               (b . ,t)
-              (c . ,t))))
-
-  (test-equal?
-   "Parse many comments within an array literal"
-   (parse-toml @~a{
-                   array2 = [ #comment
-                              1, #comment
-                              2,
-                              3,
-                              ] #comment
-                   })
-   #hasheq((array2 . (1 2 3)))))
+              (c . ,t)))))
