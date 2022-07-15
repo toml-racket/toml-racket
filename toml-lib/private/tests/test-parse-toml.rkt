@@ -261,4 +261,14 @@
                                     b = 1
                                     [a]
                                     c = 2
-                                    }))))
+                                    })))
+
+  (test-exn "Should not parse multiline key"
+            #rx""
+            (thunk (parse-toml @~a{
+                                   """test""" = 1
+                                   })))
+
+  (test-exn "Should not parse unicode key"
+            #rx""
+            (thunk (parse-toml "µ = 1"))))

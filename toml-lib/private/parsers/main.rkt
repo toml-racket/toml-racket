@@ -25,9 +25,14 @@
 (define $key-component
   (pdo $sp
        (v <-
-          (<or> (pdo (s <- (many1 (<or> $alphaNum (oneOf "_-"))))
+          (<or> (pdo (s <- (many1 (<or>
+                                   (char-range #\a #\z)
+                                   (char-range #\A #\Z)
+                                   $digit
+                                   (oneOf "_-"))))
                      (return (list->string s)))
-                $string))
+                $lit-string
+                $basic-string))
        $sp
        (return (string->symbol v))))
 
