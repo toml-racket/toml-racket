@@ -1,0 +1,31 @@
+name: TOML Compliance
+
+on:
+  - pull_request
+  - push
+
+jobs:
+  toml-compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install Racket
+        uses: Bogdanp/setup-racket@v0.11
+        with:
+          architecture: 'x64'
+          distribution: 'full'
+          variant: 'CS'
+          version: '8.5'
+      - name: Install Package and its Dependencies
+        run: ./scripts/install.bash
+      - name: Install toml-test
+        run: ./scripts/github-action-install-toml-test.bash
+      - name: Run toml-test
+        continue-on-error: true  # Allow failures for now.
+        run: ./scripts/run-toml-test.bash -n -l /tmp/toml-test-output.txt
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: toml-test-output
+          path: /tmp/toml-test-output.txt
