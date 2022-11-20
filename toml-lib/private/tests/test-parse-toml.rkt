@@ -9,7 +9,7 @@
 (module+ test
   (require rackunit
            racket/format)
-  (check-equal? (parse-toml @~a{[a]})
+  (check-equal? (parse-toml @~a{[a] })
                 '#hasheq((a . #hasheq())))
   (check-equal? (parse-toml @~a{[a.b]})
                 '#hasheq((a . #hasheq((b . #hasheq())))))
@@ -157,6 +157,24 @@
                        .
                        #hasheq((color . "red") (shape . "round"))))
               #hasheq((name . "banana"))))))
+  (test-equal?
+   "Parse tables with CRLF"
+   (parse-toml @~a{[[fruit]]@"\r"
+                   name = "apple"@"\r"
+                   @"\r"
+                   [fruit.physical]@"\r"
+                   color = "red"@"\r"
+                   shape = "round"@"\r"
+                   @"\r"
+                   [[fruit]]@"\r"
+                   name = "banana"})
+   '#hasheq((fruit
+             .
+             (#hasheq((name . "apple")
+                      (physical
+                       .
+                       #hasheq((color . "red") (shape . "round"))))
+              #hasheq((name . "banana"))))))
   ;; From TOML README
   (check-equal?
    (parse-toml @~a{[[fruit]]
@@ -253,6 +271,19 @@
    "Empty document is valid TOML"
    (parse-toml "")
    #hasheq())
+
+  (test-equal? "Whitespace is valid TOML" (parse-toml " ") #hasheq())
+  (test-equal? "Lone comment is valid TOML"
+               (parse-toml " # comment")
+               #hasheq())
+
+  (test-exn "Bare CR is not valid TOML"
+            exn:fail:parsack?
+            (thunk (parse-toml "\r")))
+
+  (test-equal? "Newlines can be CRLF"
+               (parse-toml "os=\"Windows\"\r\nnewline=\"CRLF\"")
+               '#hasheq((os . "Windows") (newline . "CRLF")))
 
   #;
   (check-exn #rx""

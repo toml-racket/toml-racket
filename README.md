@@ -2,9 +2,10 @@
 
 
 This is a [TOML] parser. It supports TOML **0.2.0**, including
-arrays-of-tables. As of 2022-08-06 it passes 286/314 tests in [toml-test]
-(testing against version 0.4.0).  Click the "TOML Compliance" badge for logs of
-toml-test.
+arrays-of-tables, though it does not enforce type constraints on arrays.
+Work is in progress to bring this into compliance with v1.0.0.
+As of 2022-11-26 it passes 292/314 tests in [toml-test]. Click the
+"TOML Compliance" badge for logs of toml-test.
 
 [TOML]: https://github.com/toml-lang/toml
 [toml-test]: https://github.com/BurntSushi/toml-test
@@ -26,7 +27,7 @@ raco pkg install --auto toml
 
 ## Goals
 
-- Pass all [toml-test] tests for TOML **0.2.0**.
+- Pass all [toml-test] tests for TOML **1.0.0**.
 
 - Provide useful error messages with positions (line:col:ofs). Do so
   for both syntax errors and semantic errors (such as table

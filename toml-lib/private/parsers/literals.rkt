@@ -24,12 +24,12 @@
               (>> (char #\n) (return #\newline))
               (>> (char #\r) (return #\return))
               (>> (char #\t) (return #\tab))
-                    (pdo (oneOf "uU")
-                         (cs <- (<or> (try (repetition $hexDigit 8))
-                                      (repetition $hexDigit 4)))
-                         (return
-                          (integer->char (string->number (list->string cs)
-                                                         16))))))
+              (pdo (oneOf "uU")
+                   (cs <- (<or> (try (repetition $hexDigit 8))
+                                (repetition $hexDigit 4)))
+                   (return
+                    (integer->char (string->number (list->string cs)
+                                                   16))))))
    "String escape sequence"))
 
 (define $basic-char
@@ -219,27 +219,23 @@
     (try
      (pdo $sp
           (char #\[)
-          $spnl (many $blank-or-comment-line) $sp
+          $ws-or-comments
           (v <- $val)
           (vs <- (many (try (pdo
-                             $spnl
+                             $ws-or-comments
                              (char #\,)
-                             $spnl
-                             (many $blank-or-comment-line)
-                             $sp
+                             $ws-or-comments
                              (vn <- $val)
                              (return vn)))))
-          $spnl
+          $ws-or-comments
           (optional (char #\,))
-          $spnl
-          (many $blank-or-comment-line)
-          $spnl
+          $ws-or-comments
           (char #\])
           (return (cons v vs))))
     (try
      (pdo $sp
           (char #\[)
-          $spnl (many $blank-or-comment-line)
+          $ws-or-comments
           (char #\])
           (return null))))
    "Array"))

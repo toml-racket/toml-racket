@@ -183,10 +183,19 @@ END
                (parse-toml "array2 = [1,]")
                #hasheq((array2 . (1))))
 
-  (test-equal? "Parse array literal with comment after trailingcomma"
+  (test-equal? "Parse array literal with comment after trailing comma"
                (parse-toml @~a{
                                array2 = [
                                          1, # test
+                                         ]
+                               })
+               #hasheq((array2 . (1))))
+
+  (test-equal? "Parse array literal with comment before trailing comma"
+               (parse-toml @~a{
+                               array2 = [
+                                         1 # test
+                                         ,
                                          ]
                                })
                #hasheq((array2 . (1))))
@@ -206,7 +215,8 @@ END
    (parse-toml @~a{
                    array2 = [ #comment
                               1, #comment
-                              2,
+                              2 # comments allowed before commas
+                              ,
                               3,
                               ] #comment
                    })

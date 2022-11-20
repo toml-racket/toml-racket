@@ -63,18 +63,22 @@
        "key"))
 
 (define $key/val ;; >> (list/c symbol? stx?)
-  (try (pdo $sp
-            (key <- (make-$key "key"))
+  (try (pdo (key <- (make-$key "key"))
             $sp
             (char #\=)
             $sp
             (pos <- (getPosition))
             (val <- $val)
-            $sp
-            (<or> $comment $newline)
-            (many $blank-or-comment-line)
-            $sp
             (return (list key (stx val pos))))))
+
+;; Newline-delimited key/value pairs (as opposed to inline table-style)
+(define $kv-lines
+  (many (pdo (kv <- $key/val)
+             $sp-maybe-comment
+             ; HACK for last-line key/value pairs
+             (<or> $eof
+                   (pdo $nl $ws-or-comments))
+             (return kv))))
 
 ;;; Table keys, handled as #\. separated
 
@@ -92,15 +96,17 @@
 ;;; Tables
 
 (define (table-under parent-keys)
-  (<?> (try (pdo $sp
-                 (keys <- (between (char #\[) (char #\])
+  (<?> (try (pdo (keys <- (between (char #\[) (char #\])
                                    (table-keys-under parent-keys)))
-                 $sp (<or> $comment $newline)
-                 (many $blank-or-comment-line)
-                 (kvs <- (many $key/val))
-                 (many $blank-or-comment-line)
-                 $sp
-                 (return (kvs->hasheq keys kvs))))
+                 $sp-maybe-comment
+                 ; HACK to allow last-line headers
+                 (<or> (pdo $eof
+                            (return (kvs->hasheq keys '())))
+                       (pdo $nl
+                            $ws-or-comments
+                            (kvs <- $kv-lines)
+                            $ws-or-comments
+                            (return (kvs->hasheq keys kvs))))))
        "table"))
 
 (define $table (table-under '()))
@@ -108,38 +114,42 @@
 ;;; Arrays of tables
 
 (define (array-of-tables-under parent-keys)
-  (<?> (try (pdo $sp
-                 (keys <- (between (string "[[") (string "]]")
+  (<?> (try (pdo (keys <- (between (string "[[") (string "]]")
                                    (table-keys-under parent-keys)))
-                 $sp (<or> $comment $newline)
-                 (many $blank-or-comment-line)
-                 (kvs <- (many $key/val))
-                 (tbs  <- (many (<or> (table-under keys)
-                                      (array-of-tables-under keys))))
-                 (aots <- (many (array-of-tables-same keys)))
-                 (many $blank-or-comment-line)
-                 $sp
-                 (return
-                  (let* ([tbs (map (curryr hash-refs keys) tbs)] ;hoist up
-                         [aot0 (merge (cons (kvs->hasheq '() kvs) tbs)
-                                      keys)]
-                         [aots (cons aot0 aots)])
-                    (match-define (list all-but-k ... k) keys)
-                    (kvs->hasheq all-but-k
-                                 (list (list k aots)))))))
+                 $sp-maybe-comment
+                 ; HACK to allow last-line headers
+                 (<or> (pdo $eof
+                            (return
+                             (let* ([aot0 (merge (list (hasheq)) keys)])
+                               (match-define (list all-but-k ... k) keys)
+                               (kvs->hasheq all-but-k
+                                            (list (list k aot0))))))
+                       (pdo $nl
+                            $ws-or-comments
+                            (kvs <- $kv-lines)
+                            (tbs  <- (many (<or> (table-under keys)
+                                                 (array-of-tables-under keys))))
+                            (aots <- (many (array-of-tables-same keys)))
+                            $ws-or-comments
+                            (return
+                             (let* ([tbs (map (curryr hash-refs keys) tbs)] ;hoist up
+                                    [aot0 (merge (cons (kvs->hasheq '() kvs) tbs)
+                                                 keys)]
+                                    [aots (cons aot0 aots)])
+                               (match-define (list all-but-k ... k) keys)
+                               (kvs->hasheq all-but-k
+                                            (list (list k aots)))))))))
        "array-of-tables"))
 
 (define (array-of-tables-same keys)
-  (<?> (try (pdo $sp
-                 (between (string "[[") (string "]]")
+  (<?> (try (pdo (between (string "[[") (string "]]")
                           (string (keys->string keys)))
-                 $sp (<or> $comment $newline)
-                 (many $blank-or-comment-line)
-                 (kvs <- (many $key/val))
+                 $sp-maybe-comment $nl
+                 $ws-or-comments
+                 (kvs <- $kv-lines)
                  (tbs  <- (many (<or> (table-under keys)
                                       (array-of-tables-under keys))))
-                 (many $blank-or-comment-line)
-                 $sp
+                 $ws-or-comments
                  (return
                   (let ([tbs (map (curryr hash-refs keys) tbs)]) ;hoist up
                     (merge (cons (kvs->hasheq '() kvs) tbs)
@@ -151,10 +161,11 @@
 ;;; A complete TOML document
 
 (define $toml-document
-  (pdo (many $blank-or-comment-line)
-       (kvs <- (many $key/val))
+  (pdo $ws-or-comments
+       (kvs <- $kv-lines)
        (tbs <- (many (<or> $table $array-of-tables)))
-       (many $blank-or-comment-line)
+       $ws-or-comments
+       (optional $comment)
        $eof
        (return (merge (cons (kvs->hasheq '() kvs) tbs)
                       '()))))
@@ -170,8 +181,8 @@
      (cond [(input-port? input) (port->bytes input)]
            [(bytes? input) input]
            [(string? input) (string->bytes/utf-8 input)]
-           [else (raise-argument-error 'parse-toml "input is not an input-port?, bytes?, or string?." input)])
-     ;; XXX Parser should not require these newlines.
-     #"\n\n\n"))
+           [else (raise-argument-error 'parse-toml
+                                       "input is not an input-port?, bytes?, or string?."
+                                       input)])))
   (stx->dat (parse-result $toml-document
                           (open-input-bytes toml-bytes))))
