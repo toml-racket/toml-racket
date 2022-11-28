@@ -4,7 +4,7 @@
 This is a [TOML] parser. It supports TOML **0.2.0**, including
 arrays-of-tables, though it does not enforce type constraints on arrays.
 Work is in progress to bring this into compliance with v1.0.0.
-As of 2022-11-26 it passes 292/314 tests in [toml-test]. Click the
+As of 2022-11-27 it passes 297/322 tests in [toml-test]. Click the
 "TOML Compliance" badge for logs of toml-test.
 
 [TOML]: https://github.com/toml-lang/toml

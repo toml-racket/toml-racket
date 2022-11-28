@@ -144,10 +144,32 @@ END
                (parse-toml "x = \"\"\"hello\\\nworld\"\"\"")
                `#hasheq((x . "helloworld")))
 
-  #;
+  (test-equal? "Line ending backslash from TOML v1.0.0"
+               (parse-result $ml-basic-string
+                             @~a{"""
+                                 The quick brown \
+
+
+                                   fox jumps over \  
+                                     the lazy dog."""})
+               "The quick brown fox jumps over the lazy dog.")
+
+  (test-equal? "Escaped newline with nothing after it"
+               (parse-result $ml-basic-string "\"\"\"\\\r\n\"\"\"")
+               "")
+
   (test-equal? "multiline basic string with tricky escape"
                (parse-toml @~a{multiline_end_esc = """When will it end? \"""...""\" should be here\""""})
                #hasheq((multiline_end_esc . "When will it end? \"\"\"...\"\"\" should be here\"")))
+
+  (test-equal? "Multiline literal string with single quotes"
+               (parse-result $ml-lit-string
+                             @~a{''''quotes' and more quotes!'''''})
+               "'quotes' and more quotes!''")
+
+  (test-exn "Too many apostrophes!"
+            exn:fail:parsack?
+            (thunk (parse-toml "apos15 = '''Here are fifteen apostrophes: ''''''''''''''''''")))
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; Array

@@ -32,6 +32,8 @@
                                                    16))))))
    "String escape sequence"))
 
+;; Per TOML v1.0.0, any Unicode character except those that must be escaped: quotation mark,
+;; backslash, and the control characters other than tab (U+0000 to U+0008, U+000A to U+001F, U+007F).
 (define $basic-char
   (<?> (<or> $escape
              $space-char
@@ -42,14 +44,14 @@
        "character or escape character"))
 
 (define $ml-content
-  (<?> (pdo (optional (try (pdo (char #\\)
-                                $nl
-                                (return null))))
-            (c <- (<or> $nl
-                        $basic-char))
-            (return c))
+  (<?> (<or> (try (pdo (char #\\) $sp $nl
+                       (skipMany (<or> $space-char $nl))))
+             $nl
+             (char #\")
+             $basic-char)
        "multiline basic string content"))
 
+;; Per TOML v1.0.0, no escapes, no single quotes, no control character other than tab.
 (define $lit-string-char
   (<?> (<or> (char #\tab)
              (char-range #\space #\&)
@@ -59,20 +61,33 @@
 
 (define $ll-content
   (<?> (<or> $nl
+             (char #\')
              $lit-string-char)
        "multiline literal string content"))
+
+;; Returns list of 0-2 of the results of a given parser.
+;; Intended for use to check for additional multi-line string quotes.
+(define (up-to-2 p)
+  (pdo (a <- (option #f p))
+       (b <- (option #f p))
+       (return (match* (a b)
+                 [(#f #f) '()]
+                 [(a #f) (list a)]
+                 [(a b) (list a b)]))))
 
 (define $basic-string
   (<?> (try (pdo (char #\")
                  (cs <- (manyUntil $basic-char (char #\")))
                  (return (list->string cs))))
-       "multi-line basicstring"))
+       "basic string"))
 
 (define $ml-basic-string
   (<?> (try (pdo (string "\"\"\"")
                  (optional $nl)
-                 (cs <- (manyUntil $ml-content (string "\"\"\"")))
-                 (return (list->string cs))))
+                 (cs <- (manyUntil $ml-content (try (string "\"\"\""))))
+                 (extras <- (up-to-2 (char #\")))
+                 ; $ml-content returns null for line-ending backslash
+                 (return (list->string (append (filter char? cs) extras)))))
        "multi-line basic string"))
 
 (define $lit-string
@@ -84,8 +99,9 @@
 (define $ml-lit-string
   (<?> (try (pdo (string "'''")
                  (optional $nl)
-                 (cs <- (manyUntil $ll-content (string "'''")))
-                 (return (list->string cs))))
+                 (cs <- (manyUntil $ll-content (try (string "'''"))))
+                 (extras <- (up-to-2 (char #\')))
+                 (return (list->string (append cs extras)))))
        "multi-line literal string"))
 
 (define $string
