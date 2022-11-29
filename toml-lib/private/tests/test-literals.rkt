@@ -258,4 +258,12 @@ END
    (let ([t (date 0 45 17 5 7 1987 0 0 #f 0)])
      `#hasheq((a . ,t)
               (b . ,t)
-              (c . ,t)))))
+              (c . ,t))))
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; Inline Table
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (test-equal? "Simple standard/inline table should be the same"
+               (parse-toml "point = { x = 1, y = 2 }")
+               (parse-toml "[point]\nx = 1\ny = 2")))

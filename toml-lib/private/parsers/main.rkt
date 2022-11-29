@@ -20,57 +20,6 @@
          (all-from-out "shared.rkt")
          (all-defined-out))
 
-;;; Keys for key = val pairs and for tables and arrays of tables
-
-(define $key-component
-  (pdo $sp
-       (v <-
-          (<or> (pdo (s <- (many1 (<or>
-                                   (char-range #\a #\z)
-                                   (char-range #\A #\Z)
-                                   $digit
-                                   (oneOf "_-"))))
-                     (return (list->string s)))
-                $lit-string
-                $basic-string))
-       $sp
-       (return (string->symbol v))))
-
-;; Valid chars for both normal keys and table keys
-(define (make-$key blame)
-  (<?>
-   (pdo (cs <- (sepBy1 $key-component (char #\.)))
-        (return cs))
-   blame))
-
-(define $common-key-char
-  (<or> $alphaNum (oneOf "_-")))
-
-(define $table-key-char
-  (<or> $common-key-char (oneOf " ")))
-
-(define $key-char
-  (<or> $common-key-char (oneOf "[].")))
-
-(define $table-key ;; >> symbol?
-  (<?> (pdo (cs <- (many1 $table-key-char))
-            (return (string->symbol (list->string cs))))
-       "table key"))
-
-(define $key ;; >> symbol?
-  (<?> (pdo (cs <- (many1 $key-char))
-            (return (string->symbol (list->string cs))))
-       "key"))
-
-(define $key/val ;; >> (list/c symbol? stx?)
-  (try (pdo (key <- (make-$key "key"))
-            $sp
-            (char #\=)
-            $sp
-            (pos <- (getPosition))
-            (val <- $val)
-            (return (list key (stx val pos))))))
-
 ;; Newline-delimited key/value pairs (as opposed to inline table-style)
 (define $kv-lines
   (many (pdo (kv <- $key/val)

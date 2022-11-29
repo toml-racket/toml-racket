@@ -256,6 +256,47 @@
           (return null))))
    "Array"))
 
+;;; Keys for key = val pairs and for tables and arrays of tables
+
+(define $key-component
+  (pdo $sp
+       (v <-
+          (<or> (pdo (s <- (many1 (<or>
+                                   (char-range #\a #\z)
+                                   (char-range #\A #\Z)
+                                   $digit
+                                   (oneOf "_-"))))
+                     (return (list->string s)))
+                $lit-string
+                $basic-string))
+       $sp
+       (return (string->symbol v))))
+
+;; Valid chars for both normal keys and table keys
+(define (make-$key blame)
+  (<?>
+   (pdo (cs <- (sepBy1 $key-component (char #\.)))
+        (return cs))
+   blame))
+
+(define $key/val ;; >> (list/c symbol? stx?)
+  (try (pdo (key <- (make-$key "key"))
+            $sp
+            (char #\=)
+            $sp
+            (pos <- (getPosition))
+            (val <- $val)
+            (return (list key (stx val pos))))))
+
+(define $inline-table
+  (<?> (try (pdo (char #\{)
+                 $sp
+                 (kvs <- (sepBy $key/val (try (pdo $sp (char #\,) $sp))))
+                 $sp
+                 (char #\})
+                 (return (stx->dat (kvs->hasheq '() kvs)))))
+       "inline table"))
+
 (define $val
   (<or> $true
         $false ;before $numeric. "fa" in "false" could be hex
@@ -263,4 +304,5 @@
         $float
         $integer
         $string
-        $array))
+        $array
+        $inline-table))
