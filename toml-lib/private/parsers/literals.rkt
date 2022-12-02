@@ -1,6 +1,8 @@
 #lang racket/base
 
-(require racket/list
+(require gregor
+         gregor/time
+         racket/list
          racket/function
          racket/match
          racket/math
@@ -217,17 +219,60 @@
 (define $true  (pdo (string "true")  (return #t)))
 (define $false (pdo (string "false") (return #f)))
 
+;;--------------------------------------------------
+;; Date parsers
+;;--------------------------------------------------
+
 (define ->num (compose string->number list->string list))
 (define $4d (pdo-seq $digit $digit $digit $digit #:combine-with ->num))
 (define $2d (pdo-seq $digit $digit #:combine-with ->num))
 
+(define (->ns ds)
+  (define padding (- 9 (length ds)))
+  (string->number
+   (list->string
+    (if (positive? padding)
+        (append ds (make-list padding #\0))
+        (take ds 9)))))
+(define $ns (pdo-seq (many $digit) #:combine-with ->ns))
+(define $s/ns
+  (pdo (s <- $2d)
+       (option (cons s 0)
+               (pdo (char #\.)
+                    (ns <- $ns)
+                    (return (cons s ns))))))
+
+(define $ymd
+  (pdo (yr <- $4d) (char #\-) (mo <- $2d) (char #\-) (dy <- $2d)
+       (return (list yr mo dy))))
+
+(define $hms
+  (pdo (h <- $2d) (char #\:) (m <- $2d) (char #\:) (s/ns <- $s/ns)
+       (return (list h m (car s/ns) (cdr s/ns)))))
+
+(define $offset
+  (<or> (pdo (oneOf "Zz")
+             (return 0))
+        (pdo (sign <- (oneOf "+-")) (h <- $2d) (char #\:) (m <- $2d)
+             (return (let [(tz (+ (* 3600 h) (* 60 m)))]
+                       (match sign
+                         [#\- (- tz)]
+                         [_ tz]))))))
+
+;; Parser for all date/time types specified by TOML v1.0.0 and toml-test.
 (define $datetime
-  ;; 1979-05-27T07:32:00Z
-  (try (pdo (yr <- $4d) (char #\-) (mo <- $2d) (char #\-) (dy <- $2d)
-            (oneOf "Tt ")
-            (hr <- $2d) (char #\:) (mn <- $2d) (char #\:) (sc <- $2d)
-            (oneOf "Zz")
-            (return (date sc mn hr dy mo yr 0 0 #f 0)))))
+  (<?> (<or> (try (pdo (ymd <- $ymd)
+                       (option (apply date ymd)
+                               (try (pdo (oneOf "Tt ")
+                                         (hms <- $hms)
+                                         (option (apply datetime (append ymd hms))
+                                                 (try (pdo (tz <- $offset)
+                                                           (return (apply moment
+                                                                          (append ymd hms)
+                                                                          #:tz tz))))))))))
+             (try (pdo (hms <- $hms)
+                       (return (apply time hms)))))
+       "datetime (offset or local)"))
 
 (define $array
   (<?>
@@ -256,7 +301,9 @@
           (return null))))
    "Array"))
 
-;;; Keys for key = val pairs and for tables and arrays of tables
+;;--------------------------------------------------
+;; Keys for key = val pairs and for tables and arrays of tables
+;;--------------------------------------------------
 
 (define $key-component
   (pdo $sp

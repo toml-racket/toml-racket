@@ -1,11 +1,11 @@
 [![Tests](https://github.com/winny-/toml-racket/actions/workflows/tests.yml/badge.svg)](https://github.com/winny-/toml-racket/actions/workflows/tests.yml) [![TOML Compliance](https://github.com/winny-/toml-racket/actions/workflows/compliance.yml/badge.svg)](https://github.com/winny-/toml-racket/actions/workflows/compliance.yml) [![raco pkg install toml](https://img.shields.io/badge/raco%20pkg%20install-toml-purple)](https://pkgs.racket-lang.org/package/toml)
 
 
-This is a [TOML] parser. It supports TOML **0.2.0**, including
-arrays-of-tables, though it does not enforce type constraints on arrays.
-Work is in progress to bring this into compliance with v1.0.0.
-As of 2022-11-27 it passes 309/322 tests in [toml-test]. Click the
-"TOML Compliance" badge for logs of toml-test.
+This is a [TOML] parser, with dates supporting nanosecond precision. Work is
+in progress to bring this into compliance with v1.0.0. As of 2022-12-01 it
+passes 317/322 tests in [toml-test], including all tests that do not involve
+duplicate table rejection.
+Click the "TOML Compliance" badge for logs of toml-test.
 
 [TOML]: https://github.com/toml-lang/toml
 [toml-test]: https://github.com/BurntSushi/toml-test

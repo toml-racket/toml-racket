@@ -1,7 +1,9 @@
 #lang at-exp racket/base
 
 
-(require racket/function
+(require gregor
+         gregor/time
+         racket/function
          racket/format
 
          "../parsack.rkt"
@@ -255,10 +257,43 @@ END
                    b = 1987-07-05t17:45:00z
                    c = 1987-07-05T17:45:00z
                    })
-   (let ([t (date 0 45 17 5 7 1987 0 0 #f 0)])
+   (let ([t (moment 1987 7 5 17 45 #:tz 0)])
      `#hasheq((a . ,t)
               (b . ,t)
               (c . ,t))))
+
+  (test-equal?
+   "RFC 3339 with offset"
+   (parse-toml @~a{odt2 = 1979-05-27T00:32:00-07:00
+                   odt3 = 1979-05-27T00:32:00.999999-07:00})
+   (hasheq 'odt2 (moment 1979 5 27 0 32 #:tz (* -7 3600))
+           'odt3 (moment 1979 5 27 0 32 0 999999000 #:tz (* -7 3600))))
+
+  (test-equal?
+   "Local date-time"
+   (parse-toml @~a{ldt1 = 1979-05-27T07:32:00
+                   ldt2 = 1979-05-27T00:32:00.999999})
+   (hasheq 'ldt1 (datetime 1979 5 27 7 32)
+           'ldt2 (datetime 1979 5 27 0 32 0 999999000)))
+
+  (test-equal? "Local date" ; FIXME
+               (parse-result $datetime "1979-05-27")
+               (date 1979 5 27))
+
+  (test-equal? "Local time"
+               (parse-toml @~a{lt1 = 07:32:00
+                               lt2 = 00:32:00.999999})
+               (hasheq 'lt1 (time 7 32)
+                       'lt2 (time 0 32 0 999999000)))
+
+  (test-equal?
+   "Truncate, not round"
+   (parse-toml @~a{odt = 1979-05-27T00:32:00.1234567899Z
+                   ldt = 1979-05-27T00:32:00.9876543211
+                   lt = 07:32:00.999999999999999})
+   (hasheq 'odt (moment 1979 5 27 0 32 0 123456789 #:tz 0)
+           'ldt (datetime 1979 5 27 0 32 0 987654321)
+           'lt (time 7 32 0 999999999)))
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; Inline Table

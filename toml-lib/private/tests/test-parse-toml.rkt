@@ -1,6 +1,7 @@
 #lang at-exp racket/base
 
-(require racket/function
+(require gregor
+         racket/function
          json
 
          "../parsack.rkt"
@@ -14,7 +15,7 @@
   (check-equal? (parse-toml @~a{[a.b]})
                 '#hasheq((a . #hasheq((b . #hasheq())))))
   (check-equal? (parse-toml @~a{today = 2014-06-26T12:34:56Z})
-                `#hasheq((today . ,(date 56 34 12 26 6 2014 0 0 #f 0))))
+                `#hasheq((today . ,(moment 2014 6 26 12 34 56 #:tz 0))))
   ;; toml-tests: `duplicate-keys`
   (check-exn #rx"conflicting values for `x'"
              (λ () (parse-toml @~a{x=1
