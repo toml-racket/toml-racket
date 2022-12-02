@@ -5,7 +5,6 @@
          racket/list
          racket/function
          racket/match
-         racket/math
 
          "../parsack.rkt"
          "../misc.rkt"

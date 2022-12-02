@@ -1,9 +1,7 @@
 #lang at-exp racket/base
 
-
 (require racket/function
          racket/format
-         rackunit
 
          "../parsack.rkt"
 
@@ -11,6 +9,8 @@
          "../parsers/shared.rkt")
 
 (module+ test
+  (require rackunit)
+
   (test-not-exn "Parses emoji using $non-ascii"
                 (thunk (parse-result $non-ascii "😂")))
   (test-exn "$non-ascii Refuses bad byte"

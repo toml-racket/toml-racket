@@ -3,7 +3,6 @@
 (require racket/list
          racket/function
          racket/match
-         racket/math
          racket/port
 
          "../parsack.rkt"

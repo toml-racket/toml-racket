@@ -1,15 +1,15 @@
 #lang at-exp racket/base
 
-
 (require racket/function
          racket/format
-         rackunit
 
          "../parsack.rkt"
 
          "../parsers/main.rkt")
 
 (module+ test
+  (require rackunit)
+
   (test-not-exn "Parses a comment with UTF-8 characters in it"
                 (thunk (parse-result $comment "# Hello world 😂\n")))
 

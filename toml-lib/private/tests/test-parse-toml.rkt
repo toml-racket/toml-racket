@@ -2,7 +2,6 @@
 
 (require gregor
          racket/function
-         json
 
          "../parsack.rkt"
          "../../main.rkt")
