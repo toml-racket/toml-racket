@@ -87,7 +87,7 @@
                  (optional $nl)
                  (cs <- (manyUntil $ml-content (try (string "\"\"\""))))
                  (extras <- (up-to-2 (char #\")))
-                 ; $ml-content returns null for line-ending backslash
+                 ;; $ml-content returns null for line-ending backslash
                  (return (list->string (append (filter char? cs) extras)))))
        "multi-line basic string"))
 

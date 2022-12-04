@@ -33,10 +33,8 @@ cmd_default() {
     done
     shift $((OPTIND-1))
 
-    # My version of toml-test does not support 0.2.0
     cmd=(
         toml-test
-        -toml 0.4.0
         --
         racket -l toml/compliance/decoder
     )

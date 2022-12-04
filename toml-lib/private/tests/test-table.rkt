@@ -18,7 +18,7 @@
             exn:fail:parsack?
             (thunk (parse-toml @~a{[[header]] key = "can't be same line"})))
 
-  ; Consider moving. Not really a table issue, but related to the above tests.
+  ;; Consider moving. Not really a table issue, but related to the above tests.
   (test-exn "Keys need newlines"
             exn:fail:parsack?
             (thunk (parse-toml @~a{keys = "need" new = "lines"})))

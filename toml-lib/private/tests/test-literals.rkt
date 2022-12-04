@@ -276,7 +276,7 @@ END
    (hasheq 'ldt1 (datetime 1979 5 27 7 32)
            'ldt2 (datetime 1979 5 27 0 32 0 999999000)))
 
-  (test-equal? "Local date" ; FIXME
+  (test-equal? "Local date"
                (parse-result $datetime "1979-05-27")
                (date 1979 5 27))
 

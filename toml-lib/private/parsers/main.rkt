@@ -23,7 +23,7 @@
 (define $kv-lines
   (many (pdo (kv <- $key/val)
              $sp-maybe-comment
-             ; HACK for last-line key/value pairs
+             ;; HACK for last-line key/value pairs
              (<or> $eof
                    (pdo $nl $ws-or-comments))
              (return kv))))
@@ -47,7 +47,7 @@
   (<?> (try (pdo (keys <- (between (char #\[) (char #\])
                                    (table-keys-under parent-keys)))
                  $sp-maybe-comment
-                 ; HACK to allow last-line headers
+                 ;; HACK to allow last-line headers
                  (<or> (pdo $eof
                             (return (kvs->hasheq keys '())))
                        (pdo $nl
@@ -65,7 +65,7 @@
   (<?> (try (pdo (keys <- (between (string "[[") (string "]]")
                                    (table-keys-under parent-keys)))
                  $sp-maybe-comment
-                 ; HACK to allow last-line headers
+                 ;; HACK to allow last-line headers
                  (<or> (pdo $eof
                             (return
                              (let* ([aot0 (merge (list (hasheq)) keys)])
