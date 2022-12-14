@@ -3,7 +3,6 @@
 (require racket/list
          racket/function
          racket/match
-         racket/math
 
          "../parsack.rkt"
          "../misc.rkt"
@@ -22,17 +21,8 @@
 
 (define $nl
   (<?> (<or> (string "\r\n")
-             (char #\newline))
-       "Newline (LF or CRLF"))
-
-(define $spnl
-  (<?> (pdo $sp (optional $nl) $sp
-            (return null))
-       "zero or more spaces, and optional newline plus zero or more spaces"))
-
-(define $blank-line
-  (<?> (try (pdo $sp $nl (return (void))))
-       "blank line"))
+             $newline)
+       "newline (LF or CRLF)"))
 
 (define $comment-char
   (<?> (<or> (char #\tab)
@@ -43,9 +33,13 @@
        "comment character"))
 
 (define $comment
-  (<?> (try (pdo $sp (char #\#) (manyUntil $comment-char $nl)
+  (<?> (try (pdo (char #\#) (manyUntil $comment-char (lookAhead (<or> $eof $nl)))
                  (return null)))
        "comment"))
 
-(define $blank-or-comment-line
-  (<or> $blank-line $comment))
+(define $sp-maybe-comment
+  (pdo $sp (optional $comment)))
+
+(define $ws-or-comments
+  (<?> (pdo (many (try (pdo $sp-maybe-comment $nl))) $sp)
+       "whitespace (possibly with comments)"))

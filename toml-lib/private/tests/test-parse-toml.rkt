@@ -1,7 +1,7 @@
 #lang at-exp racket/base
 
-(require racket/function
-         json
+(require gregor
+         racket/function
 
          "../parsack.rkt"
          "../../main.rkt")
@@ -9,12 +9,12 @@
 (module+ test
   (require rackunit
            racket/format)
-  (check-equal? (parse-toml @~a{[a]})
+  (check-equal? (parse-toml @~a{[a] })
                 '#hasheq((a . #hasheq())))
   (check-equal? (parse-toml @~a{[a.b]})
                 '#hasheq((a . #hasheq((b . #hasheq())))))
   (check-equal? (parse-toml @~a{today = 2014-06-26T12:34:56Z})
-                `#hasheq((today . ,(date 56 34 12 26 6 2014 0 0 #f 0))))
+                `#hasheq((today . ,(moment 2014 6 26 12 34 56 #:tz 0))))
   ;; toml-tests: `duplicate-keys`
   (check-exn #rx"conflicting values for `x'"
              (λ () (parse-toml @~a{x=1
@@ -157,6 +157,24 @@
                        .
                        #hasheq((color . "red") (shape . "round"))))
               #hasheq((name . "banana"))))))
+  (test-equal?
+   "Parse tables with CRLF"
+   (parse-toml @~a{[[fruit]]@"\r"
+                   name = "apple"@"\r"
+                   @"\r"
+                   [fruit.physical]@"\r"
+                   color = "red"@"\r"
+                   shape = "round"@"\r"
+                   @"\r"
+                   [[fruit]]@"\r"
+                   name = "banana"})
+   '#hasheq((fruit
+             .
+             (#hasheq((name . "apple")
+                      (physical
+                       .
+                       #hasheq((color . "red") (shape . "round"))))
+              #hasheq((name . "banana"))))))
   ;; From TOML README
   (check-equal?
    (parse-toml @~a{[[fruit]]
@@ -253,6 +271,19 @@
    "Empty document is valid TOML"
    (parse-toml "")
    #hasheq())
+
+  (test-equal? "Whitespace is valid TOML" (parse-toml " ") #hasheq())
+  (test-equal? "Lone comment is valid TOML"
+               (parse-toml " # comment")
+               #hasheq())
+
+  (test-exn "Bare CR is not valid TOML"
+            exn:fail:parsack?
+            (thunk (parse-toml "\r")))
+
+  (test-equal? "Newlines can be CRLF"
+               (parse-toml "os=\"Windows\"\r\nnewline=\"CRLF\"")
+               '#hasheq((os . "Windows") (newline . "CRLF")))
 
   #;
   (check-exn #rx""

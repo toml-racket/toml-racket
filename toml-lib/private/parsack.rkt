@@ -10,6 +10,7 @@
                   many many1
                   manyTill many1Till
                   manyUntil many1Until
+                  skipMany
                   sepBy sepBy1
                   oneOf noneOf oneOfStrings
                   option optional
@@ -33,6 +34,7 @@
          many many1
          manyTill many1Till
          manyUntil many1Until
+         skipMany
          sepBy sepBy1
          oneOf noneOf oneOfStrings
          option optional

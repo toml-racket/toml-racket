@@ -1,8 +1,9 @@
 #!/usr/bin/env racket
 #lang racket/base
 
-(require json
-         racket/date
+(require gregor
+         gregor/time
+         json
          racket/format
          racket/match
          racket/port
@@ -28,10 +29,14 @@
                                   [(nan? v) "nan"]
                                   [(infinite? v) (string-replace (~a v) ".0" "")]
                                   [else (~a v)]))]
-    [(? date? d) (hasheq 'type "datetime"
-                         'value
-                         (parameterize ([date-display-format 'iso-8601])
-                           (string-append (date->string d #t) "Z")))]
+    [(? moment? odt) (hasheq 'type "datetime"
+                             'value (moment->iso8601 odt))]
+    [(? datetime? ldt) (hasheq 'type "datetime-local"
+                               'value (datetime->iso8601 ldt))]
+    [(? date? ld) (hasheq 'type "date-local"
+                          'value (date->iso8601 ld))]
+    [(? time? lt) (hasheq 'type "time-local"
+                          'value (time->iso8601 lt))]
     [(? list? xs)
      (for/list ([x xs])
        (type-jsexpr x))]

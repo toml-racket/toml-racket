@@ -1,9 +1,10 @@
 #lang racket/base
 
-(require racket/list
+(require gregor
+         gregor/time
+         racket/list
          racket/function
          racket/match
-         racket/math
 
          "../parsack.rkt"
          "../misc.rkt"
@@ -24,14 +25,16 @@
               (>> (char #\n) (return #\newline))
               (>> (char #\r) (return #\return))
               (>> (char #\t) (return #\tab))
-                    (pdo (oneOf "uU")
-                         (cs <- (<or> (try (repetition $hexDigit 8))
-                                      (repetition $hexDigit 4)))
-                         (return
-                          (integer->char (string->number (list->string cs)
-                                                         16))))))
+              (pdo (oneOf "uU")
+                   (cs <- (<or> (try (repetition $hexDigit 8))
+                                (repetition $hexDigit 4)))
+                   (return
+                    (integer->char (string->number (list->string cs)
+                                                   16))))))
    "String escape sequence"))
 
+;; Per TOML v1.0.0, any Unicode character except those that must be escaped: quotation mark,
+;; backslash, and the control characters other than tab (U+0000 to U+0008, U+000A to U+001F, U+007F).
 (define $basic-char
   (<?> (<or> $escape
              $space-char
@@ -42,14 +45,14 @@
        "character or escape character"))
 
 (define $ml-content
-  (<?> (pdo (optional (try (pdo (char #\\)
-                                $nl
-                                (return null))))
-            (c <- (<or> $nl
-                        $basic-char))
-            (return c))
+  (<?> (<or> (try (pdo (char #\\) $sp $nl
+                       (skipMany (<or> $space-char $nl))))
+             $nl
+             (char #\")
+             $basic-char)
        "multiline basic string content"))
 
+;; Per TOML v1.0.0, no escapes, no single quotes, no control character other than tab.
 (define $lit-string-char
   (<?> (<or> (char #\tab)
              (char-range #\space #\&)
@@ -59,20 +62,33 @@
 
 (define $ll-content
   (<?> (<or> $nl
+             (char #\')
              $lit-string-char)
        "multiline literal string content"))
+
+;; Returns list of 0-2 of the results of a given parser.
+;; Intended for use to check for additional multi-line string quotes.
+(define (up-to-2 p)
+  (pdo (a <- (option #f p))
+       (b <- (option #f p))
+       (return (match* (a b)
+                 [(#f #f) '()]
+                 [(a #f) (list a)]
+                 [(a b) (list a b)]))))
 
 (define $basic-string
   (<?> (try (pdo (char #\")
                  (cs <- (manyUntil $basic-char (char #\")))
                  (return (list->string cs))))
-       "multi-line basicstring"))
+       "basic string"))
 
 (define $ml-basic-string
   (<?> (try (pdo (string "\"\"\"")
                  (optional $nl)
-                 (cs <- (manyUntil $ml-content (string "\"\"\"")))
-                 (return (list->string cs))))
+                 (cs <- (manyUntil $ml-content (try (string "\"\"\""))))
+                 (extras <- (up-to-2 (char #\")))
+                 ;; $ml-content returns null for line-ending backslash
+                 (return (list->string (append (filter char? cs) extras)))))
        "multi-line basic string"))
 
 (define $lit-string
@@ -84,8 +100,9 @@
 (define $ml-lit-string
   (<?> (try (pdo (string "'''")
                  (optional $nl)
-                 (cs <- (manyUntil $ll-content (string "'''")))
-                 (return (list->string cs))))
+                 (cs <- (manyUntil $ll-content (try (string "'''"))))
+                 (extras <- (up-to-2 (char #\')))
+                 (return (list->string (append cs extras)))))
        "multi-line literal string"))
 
 (define $string
@@ -201,17 +218,60 @@
 (define $true  (pdo (string "true")  (return #t)))
 (define $false (pdo (string "false") (return #f)))
 
+;;--------------------------------------------------
+;; Date parsers
+;;--------------------------------------------------
+
 (define ->num (compose string->number list->string list))
 (define $4d (pdo-seq $digit $digit $digit $digit #:combine-with ->num))
 (define $2d (pdo-seq $digit $digit #:combine-with ->num))
 
+(define (->ns ds)
+  (define padding (- 9 (length ds)))
+  (string->number
+   (list->string
+    (if (positive? padding)
+        (append ds (make-list padding #\0))
+        (take ds 9)))))
+(define $ns (pdo-seq (many $digit) #:combine-with ->ns))
+(define $s/ns
+  (pdo (s <- $2d)
+       (option (cons s 0)
+               (pdo (char #\.)
+                    (ns <- $ns)
+                    (return (cons s ns))))))
+
+(define $ymd
+  (pdo (yr <- $4d) (char #\-) (mo <- $2d) (char #\-) (dy <- $2d)
+       (return (list yr mo dy))))
+
+(define $hms
+  (pdo (h <- $2d) (char #\:) (m <- $2d) (char #\:) (s/ns <- $s/ns)
+       (return (list h m (car s/ns) (cdr s/ns)))))
+
+(define $offset
+  (<or> (pdo (oneOf "Zz")
+             (return 0))
+        (pdo (sign <- (oneOf "+-")) (h <- $2d) (char #\:) (m <- $2d)
+             (return (let [(tz (+ (* 3600 h) (* 60 m)))]
+                       (match sign
+                         [#\- (- tz)]
+                         [_ tz]))))))
+
+;; Parser for all date/time types specified by TOML v1.0.0 and toml-test.
 (define $datetime
-  ;; 1979-05-27T07:32:00Z
-  (try (pdo (yr <- $4d) (char #\-) (mo <- $2d) (char #\-) (dy <- $2d)
-            (oneOf "Tt ")
-            (hr <- $2d) (char #\:) (mn <- $2d) (char #\:) (sc <- $2d)
-            (oneOf "Zz")
-            (return (date sc mn hr dy mo yr 0 0 #f 0)))))
+  (<?> (<or> (try (pdo (ymd <- $ymd)
+                       (option (apply date ymd)
+                               (try (pdo (oneOf "Tt ")
+                                         (hms <- $hms)
+                                         (option (apply datetime (append ymd hms))
+                                                 (try (pdo (tz <- $offset)
+                                                           (return (apply moment
+                                                                          (append ymd hms)
+                                                                          #:tz tz))))))))))
+             (try (pdo (hms <- $hms)
+                       (return (apply time hms)))))
+       "datetime (offset or local)"))
 
 (define $array
   (<?>
@@ -219,30 +279,69 @@
     (try
      (pdo $sp
           (char #\[)
-          $spnl (many $blank-or-comment-line) $sp
+          $ws-or-comments
           (v <- $val)
           (vs <- (many (try (pdo
-                             $spnl
+                             $ws-or-comments
                              (char #\,)
-                             $spnl
-                             (many $blank-or-comment-line)
-                             $sp
+                             $ws-or-comments
                              (vn <- $val)
                              (return vn)))))
-          $spnl
+          $ws-or-comments
           (optional (char #\,))
-          $spnl
-          (many $blank-or-comment-line)
-          $spnl
+          $ws-or-comments
           (char #\])
           (return (cons v vs))))
     (try
      (pdo $sp
           (char #\[)
-          $spnl (many $blank-or-comment-line)
+          $ws-or-comments
           (char #\])
           (return null))))
    "Array"))
+
+;;--------------------------------------------------
+;; Keys for key = val pairs and for tables and arrays of tables
+;;--------------------------------------------------
+
+(define $key-component
+  (pdo $sp
+       (v <-
+          (<or> (pdo (s <- (many1 (<or>
+                                   (char-range #\a #\z)
+                                   (char-range #\A #\Z)
+                                   $digit
+                                   (oneOf "_-"))))
+                     (return (list->string s)))
+                $lit-string
+                $basic-string))
+       $sp
+       (return (string->symbol v))))
+
+;; Valid chars for both normal keys and table keys
+(define (make-$key blame)
+  (<?>
+   (pdo (cs <- (sepBy1 $key-component (char #\.)))
+        (return cs))
+   blame))
+
+(define $key/val ;; >> (list/c symbol? stx?)
+  (try (pdo (key <- (make-$key "key"))
+            $sp
+            (char #\=)
+            $sp
+            (pos <- (getPosition))
+            (val <- $val)
+            (return (list key (stx val pos))))))
+
+(define $inline-table
+  (<?> (try (pdo (char #\{)
+                 $sp
+                 (kvs <- (sepBy $key/val (try (pdo $sp (char #\,) $sp))))
+                 $sp
+                 (char #\})
+                 (return (stx->dat (kvs->hasheq '() kvs)))))
+       "inline table"))
 
 (define $val
   (<or> $true
@@ -251,4 +350,5 @@
         $float
         $integer
         $string
-        $array))
+        $array
+        $inline-table))
