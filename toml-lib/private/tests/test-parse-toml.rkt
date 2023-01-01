@@ -45,7 +45,6 @@
                                 d = 2})
                 '#hasheq((a . #hasheq((b . #hasheq((c . 1)))
                                       (d . 2)))))
-  #;
   (check-exn #rx"redefinition of `a'"
              (λ () (parse-toml @~a{[a]
                                    b = 1
@@ -56,6 +55,43 @@
                                    b = 1
                                    [a.b]
                                    c = 2})))
+  ;; See: https://github.com/toml-lang/toml/issues/846
+  ;;      https://github.com/toml-lang/toml/pull/859
+  (check-exn
+   #rx"redefinition of `a.b.c' with dotted key"
+   (λ () (parse-toml @~a{[a.b.c]
+                         z = 9
+
+                         [a]
+                         b.c.t = "Dotted keys adding after explicit definition is invalid"})))
+  ;; TOML v1.0.0 table examples
+  (test-exn "Redefinition of table implied by dotted key prohibited"
+            #rx"redefinition of `fruit.apple' with dotted key"
+            (λ () (parse-toml @~a{[fruit]
+                                  apple.color = "red"
+                                  apple.taste.sweet = true
+
+                                  [fruit.apple]})))
+  (test-equal? "Subtable of table implied by dotted key allowed"
+               (parse-toml @~a{[fruit]
+                               apple.color = "red"
+                               apple.taste.sweet = true
+
+                               [fruit.apple.texture]
+                               smooth = true})
+               '#hasheq((fruit . #hasheq((apple . #hasheq((color . "red")
+                                                          (taste . #hasheq((sweet . #t)))
+                                                          (texture . #hasheq((smooth . #t)))))))))
+  (test-exn "Cannot add to inline table"
+            #rx"redefinition of `product.type`" ; TODO terminal error character inconsistency?
+            (λ () (parse-toml @~a{[product]
+                                  type = { name = "Nail" }
+                                  type.edible = false})))
+  (test-exn "Inline table cannot add to already-defined table"
+            #rx"conflicting values for `product.type'" ; TODO consider improving error?
+            (λ () (parse-toml @~a{[product]
+                                  type.name = "Nail"
+                                  type = { edible = false }})))
   (check-exn exn:fail:parsack? (λ () (parse-toml "[]")))
   (check-exn exn:fail:parsack? (λ () (parse-toml "[a.]")))
   (check-exn exn:fail:parsack? (λ () (parse-toml "[a..b]")))
@@ -284,15 +320,6 @@
   (test-equal? "Newlines can be CRLF"
                (parse-toml "os=\"Windows\"\r\nnewline=\"CRLF\"")
                '#hasheq((os . "Windows") (newline . "CRLF")))
-
-  #;
-  (check-exn #rx""
-             (thunk (parse-toml @~a{
-                                    [a]
-                                    b = 1
-                                    [a]
-                                    c = 2
-                                    })))
 
   (test-exn "Should not parse multiline key"
             #rx""

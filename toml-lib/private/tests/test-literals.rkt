@@ -98,9 +98,21 @@
                (parse-toml "x = \"\\u00d8\"")
                #hasheq((x . "Ø")))
 
+  (test-equal? "basic Str \\u escape should be exactly 4 hex digits"
+               (parse-toml "x = \"\\u00d80000\"")
+               #hasheq((x . "Ø0000")))
+
   (test-equal? "basic Str Accepts 8 hexdigit unicode escape"
-               (parse-toml "x = \"\\u000000d8\"")
+               (parse-toml "x = \"\\U000000d8\"")
                #hasheq((x . "Ø")))
+
+  (test-exn "basic Str rejects \\UXXXX (capital `U`) escape"
+            exn:fail:parsack?
+            (thunk (parse-toml "x = \"\\U00d8\"")))
+
+  (test-exn "basic Str requires \\U escape to be 8 hex digits"
+            exn:fail:parsack?
+            (thunk (parse-toml "x = \"\\U0123456\"")))
 
   (test-equal? "Escaped Str \"foo bar baz\""
                (parse-toml "x = \"foo bar baz\"")
@@ -187,11 +199,11 @@ END
 
   (test-equal? "ar0 = [1,2,3]"
                (parse-toml "ar0 = [1,2,3]")
-                #hasheq((ar0 . (1 2 3))))
+               #hasheq((ar0 . (1 2 3))))
 
   (test-equal? "ar0 = [ 1, 2, 3] "
-                (parse-toml "ar0 = [ 1, 2, 3] ")
-                #hasheq((ar0 . (1 2 3))))
+               (parse-toml "ar0 = [ 1, 2, 3] ")
+               #hasheq((ar0 . (1 2 3))))
 
   (test-equal? "Parse empty array w whitespace inside"
                (parse-toml "ar0 = [ ]")
