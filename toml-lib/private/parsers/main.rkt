@@ -49,12 +49,12 @@
                  $sp-maybe-comment
                  ;; HACK to allow last-line headers
                  (<or> (pdo $eof
-                            (return (kvs->hasheq keys '())))
+                            (return (kvs->table keys '())))
                        (pdo $nl
                             $ws-or-comments
                             (kvs <- $kv-lines)
                             $ws-or-comments
-                            (return (kvs->hasheq keys kvs))))))
+                            (return (kvs->table keys kvs))))))
        "table"))
 
 (define $table (table-under '()))
@@ -68,10 +68,10 @@
                  ;; HACK to allow last-line headers
                  (<or> (pdo $eof
                             (return
-                             (let* ([aot0 (merge (list (hasheq)) keys)])
-                               (match-define (list all-but-k ... k) keys)
-                               (kvs->hasheq all-but-k
-                                            (list (list k aot0))))))
+                             (match-let ([(list all-but-k ... k) keys])
+                               (kvs->table all-but-k
+                                            (list (list (list k) (hasheq)))
+                                            #t))))
                        (pdo $nl
                             $ws-or-comments
                             (kvs <- $kv-lines)
@@ -80,13 +80,14 @@
                             (aots <- (many (array-of-tables-same keys)))
                             $ws-or-comments
                             (return
-                             (let* ([tbs (map (curryr hash-refs keys) tbs)] ;hoist up
-                                    [aot0 (merge (cons (kvs->hasheq '() kvs) tbs)
+                             (let* ([tbs (map (curryr change-root keys) tbs)] ;hoist up
+                                    [aot0 (merge (cons (kvs->table '() kvs) tbs)
                                                  keys)]
                                     [aots (cons aot0 aots)])
                                (match-define (list all-but-k ... k) keys)
-                               (kvs->hasheq all-but-k
-                                            (list (list k aots)))))))))
+                               (kvs->table all-but-k
+                                            (list (list (list k) aots))
+                                            #t)))))))
        "array-of-tables"))
 
 (define (array-of-tables-same keys)
@@ -99,8 +100,8 @@
                                       (array-of-tables-under keys))))
                  $ws-or-comments
                  (return
-                  (let ([tbs (map (curryr hash-refs keys) tbs)]) ;hoist up
-                    (merge (cons (kvs->hasheq '() kvs) tbs)
+                  (let ([tbs (map (curryr change-root keys) tbs)]) ;hoist up
+                    (merge (cons (kvs->table '() kvs) tbs)
                            keys)))))
        "array-of-tables"))
 
@@ -115,14 +116,14 @@
        $ws-or-comments
        (optional $comment)
        $eof
-       (return (merge (cons (kvs->hasheq '() kvs) tbs)
+       (return (merge (cons (kvs->table '() kvs) tbs)
                       '()))))
 
 ;;; Main, public function. Returns a `hasheq` using the same
 ;;; conventions as the Racket `json` library. e.g. You should be able
 ;;; to give the result to `jsexpr->string`. EXCEPTION: TOML datetimes
-;;; are parsed to Racket `date` struct values, which do NOT satisfy
-;;; `jsexpr?`.
+;;; are parsed to Racket (gregor library) `date` struct values,
+;;; which do NOT satisfy `jsexpr?`.
 (define (parse-toml input) ;; string? -> almost-jsexpr?
   (define toml-bytes
     (bytes-append

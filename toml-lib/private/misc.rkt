@@ -1,13 +1,30 @@
 #lang racket/base
 
 (require racket/contract
+         racket/set
          racket/string
          racket/function
          racket/match
          json
          "stx.rkt")
 
-(provide (all-defined-out))
+(provide merge
+         keys->string
+         kvs->table
+         kvs->hasheq
+         change-root)
+
+(module+ test
+  (require rackunit))
+
+;; The `table` struct contains both the TOML contents and metadata required to check for duplicates.
+;;
+;; header is a list of symbols based on header-specified keys, or #f if an array of tables.
+;; implied is a list of keys (symbol lists) implied by dotted keys in key/value pairs of a table.
+;; contents is the full document's hash table restricted to the specified table section, not
+;;   merely a subtree rooted at the header node. This was based on the existing parsing approach;
+;;   a investigation/comparison with alternative approaches has not been done.
+(struct table (header implied contents) #:transparent)
 
 ;;; hasheq-merge
 
@@ -40,6 +57,8 @@
                      (conflict-error (cons k keys) (hash-ref h0 k) v1)]
                     [else v1]))))
 
+;; Raises an error for conflicting values.
+;; Note that `ks` is the keypath of the conflict in reverse, easing the recursive `hasheq-merge`.
 (define (conflict-error ks v0 v1)
   (error 'toml
          "conflicting values for `~a'\n at ~a: `~a'\n at ~a: `~a'"
@@ -70,67 +89,87 @@
                 (hasheq 'a (hasheq 'b (hasheq 'c 1)))))))
 
 ;;; misc utils
+;; Returns hasheq resulting from the combination of the tables.
+;; Checks for duplicate headers via `consolidate-headers` and overlap with dotted keys.
+(define (merge tbs keys) ;; (listof table?) (listof symbol?) -> hasheq?
+  (define headers (consolidate-headers tbs keys))
+  (for/fold ([ht (hasheq)])
+            ([tb (in-list tbs)])
+    (define overlap (set-intersect headers (table-implied tb)))
+    (unless (set-empty? overlap)
+      (error 'toml "redefinition of `~a' with dotted key" (keys->string (set-first overlap))))
+    (hasheq-merge (table-contents tb) ht keys)))
 
-(define (merge hts keys) ;; (listof hasheq?) (listof symbol?) -> hasheq?
-  (catch-redefs hts) ;; WHY?? Won't hasheq-merge catch this ???
-  (foldl (curryr hasheq-merge keys) (hasheq) hts))
-
-(define (catch-redefs hts)
-  (let loop ([hts hts])
-    (match hts
-      [(cons ht0 more)
-       (for ([ht1 (in-list more)])
-         (when (equal? ht0 ht1)
-           (error 'toml
-                  "redefinition of `~a'"
-                  (keys->string (ht->keys ht0)))))
-       (loop more)]
-      [_ (void)])))
-
-(define (ht->keys ht)
-  (match ht
-    [(hash-table (k v)) (cons k (ht->keys v))]
-    [_ '()]))
+;; Combines tables that are not part of arrays and raises errors for duplicates.
+(define (consolidate-headers tbs keys)
+  (for*/fold ([names (set)])
+             ([tb (in-list tbs)]
+              [keys (in-value (table-header tb))]
+              #:when keys)
+    (when (set-member? names keys)
+      (error 'toml "redefinition of `~a'" (keys->string keys)))
+    (set-add names keys)))
 
 (define (keys->string ks)
   (string-join (map symbol->string ks) "."))
 
-(define (kvs->hasheq keys pairs [orig-keys keys])
-  ;; (listof symbol?) (listof (list/c symbol? any/c)) -> hasheq?
+(define (kvs->table keys pairs [aot? #f] [orig-keys keys])
+  ;; (listof symbol?) (listof (list/c (listof symbol?) any/c)) -> table?
   (match keys
-    [(list* this more) (hasheq this (kvs->hasheq more pairs orig-keys))]
-    [(list) (for/fold ([ht (hasheq)])
+    [(list* this more)
+     (define embedded (kvs->table more pairs aot? orig-keys))
+     (struct-copy table embedded
+                  [contents (hasheq this (table-contents embedded))])]
+    [(list) (for/fold ([ht (table (and (not aot?) orig-keys) (set) (hasheq))]
+                       #:result (struct-copy table ht
+                                             [implied (set-remove (table-implied ht) orig-keys)]))
                       ([p (in-list pairs)])
-              (match-define (list k v) p)
-              (define relative (match k [(? symbol? s) (list s)] [z z]))
-              (define start (append relative (reverse orig-keys)) )
-              (define (place ht keypath)
+              (match-define (list ks v) p)
+              (define (place tb parents keypath)
+                (match-define (table names dotted ht) tb)
                 (match keypath
                   [(list sym)
                    (when (hash-has-key? ht sym)
-                     (conflict-error start (hash-ref ht sym) v))
-                   (hash-set ht sym v)]
+                     (conflict-error (cons sym parents) (hash-ref ht sym) v))
+                   (struct-copy table tb
+                                [contents (hash-set ht sym v)])]
                   [(list k0 krest ...)
-                   (when (and (hash-has-key? ht k0))
+                   (define base-keys (reverse (cons k0 parents)))
+                   (when (hash-has-key? ht k0)
                      (define dest (hash-ref ht k0))
                      (unless (hash? dest)
                        (error 'toml
-                              "redefinition of `~a`"
-                              (keys->string start))))
-                   (hash-update ht k0 (curryr place krest) (const (hasheq)))]))
-              (place ht relative))]))
+                              "redefinition of `~a`" ; TODO inconsistent terminal character?
+                              (keys->string base-keys))))
+                   (define child
+                     (place (table names dotted (hash-ref ht k0 (const (hasheq))))
+                            (cons k0 parents)
+                            krest))
+                   (struct-copy table tb
+                                [implied (set-add (table-implied child) base-keys)]
+                                [contents (hash-set ht k0 (table-contents child))])]))
+              (place ht (reverse orig-keys) ks))]))
+
+(define (kvs->hasheq kvs)
+  (table-contents (kvs->table '() kvs)))
 
 (module+ test
   (check-exn #rx"conflicting values for `a.b.c.x'"
-             (λ () (kvs->hasheq '(a b c) '([x 0][x 1]))))
-  (check-equal? (kvs->hasheq '() '([x 0][y 1]))
-                (hasheq 'x 0 'y 1))
-  (check-equal? (kvs->hasheq '(a) '([x 0][y 1]))
-                (hasheq 'a (hasheq 'x 0 'y 1)))
-  (check-equal? (kvs->hasheq '(a b) '([x 0][y 1]))
-                (hasheq 'a (hasheq 'b (hasheq 'x 0 'y 1))))
-  (check-equal? (kvs->hasheq '(a) '())
-                (hasheq 'a (hasheq))))
+             (λ () (kvs->table '(a b c) '([(x) 0][(x) 1]))))
+  (check-equal? (kvs->table '() '([(x) 0][(y) 1]))
+                (table '() (set) (hasheq 'x 0 'y 1)))
+  (check-equal? (kvs->table '(a) '([(x) 0][(y) 1]))
+                (table '(a) (set) (hasheq 'a (hasheq 'x 0 'y 1))))
+  (check-equal? (kvs->table '(a) '([(x) 0][(y) 1]) #t)
+                (table #f (set) (hasheq 'a (hasheq 'x 0 'y 1))))
+  (check-equal? (kvs->table '(a b) '([(x) 0][(y) 1]))
+                (table '(a b) (set) (hasheq 'a (hasheq 'b (hasheq 'x 0 'y 1)))))
+  (check-equal? (kvs->table '(a) '())
+                (table '(a) (set) (hasheq 'a (hasheq))))
+  (check-equal? (kvs->table '(a) '([(b x) 0][(b y) 1]))
+                (table '(a) (set '(a b)) (hasheq 'a (hasheq 'b (hasheq 'x 0 'y 1)))))
+  (check-equal? (kvs->table '(a) '([(b c t) 9]))
+                (table '(a) (set '(a b) '(a b c)) (hasheq 'a (hasheq 'b (hasheq 'c (hasheq 't 9)))))))
 
 (define (hash-refs ht keys)
   (match keys
@@ -138,7 +177,6 @@
     [(list* k more) (hash-refs (hash-ref ht k) more)]))
 
 (module+ test
-  (require rackunit)
   (check-equal? (hash-refs #hasheq([a . 0]) '())
                 #hasheq([a . 0]))
   (check-equal? (hash-refs #hasheq([a . 0]) '(a))
@@ -147,3 +185,7 @@
                 0)
   (check-equal? (hash-refs #hasheq([a . #hasheq([b . #hasheq([c . 0])])]) '(a b c))
                 0))
+
+(define (change-root tb keys)
+  (struct-copy table tb
+               [contents (hash-refs (table-contents tb) keys)]))

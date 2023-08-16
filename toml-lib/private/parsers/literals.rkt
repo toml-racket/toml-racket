@@ -25,9 +25,13 @@
               (>> (char #\n) (return #\newline))
               (>> (char #\r) (return #\return))
               (>> (char #\t) (return #\tab))
-              (pdo (oneOf "uU")
-                   (cs <- (<or> (try (repetition $hexDigit 8))
-                                (repetition $hexDigit 4)))
+              (pdo (char #\u)
+                   (cs <- (repetition $hexDigit 4))
+                   (return
+                    (integer->char (string->number (list->string cs)
+                                                   16))))
+              (pdo (char #\U)
+                   (cs <- (repetition $hexDigit 8))
                    (return
                     (integer->char (string->number (list->string cs)
                                                    16))))))
@@ -325,7 +329,7 @@
         (return cs))
    blame))
 
-(define $key/val ;; >> (list/c symbol? stx?)
+(define $key/val ;; >> (list/c (listof symbol?) stx?)
   (try (pdo (key <- (make-$key "key"))
             $sp
             (char #\=)
@@ -340,7 +344,7 @@
                  (kvs <- (sepBy $key/val (try (pdo $sp (char #\,) $sp))))
                  $sp
                  (char #\})
-                 (return (stx->dat (kvs->hasheq '() kvs)))))
+                 (return (stx->dat (kvs->hasheq kvs)))))
        "inline table"))
 
 (define $val
