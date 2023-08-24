@@ -27,4 +27,5 @@ ins() {
 
 ins toml-lib
 ins toml-compliance
+ins toml-doc
 ins toml
