@@ -4,5 +4,4 @@
 
 (define build-deps '("base"
                      "scribble-lib"
-                     "toml-lib"
-                     "json"))
+                     "toml-lib"))
