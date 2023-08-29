@@ -1,6 +1,8 @@
 #lang setup/infotab
+
 (define deps '("toml-lib"
                "toml-doc"
                "toml-compliance"
                "base"))
 
+(define license 'BSD-2-Clause)
