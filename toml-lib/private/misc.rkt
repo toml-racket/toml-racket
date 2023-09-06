@@ -110,8 +110,44 @@
       (error 'toml "redefinition of `~a'" (keys->string keys)))
     (set-add names keys)))
 
+;; Converts lists of keys (symbols) to the corresponding dotted string for TOML headers.
+;; TOML specifies that all Unicode characters are allowed except \u0000-\u0008, \u000A-\u001F,
+;; and \u007F. Unescaped tab (\u0009) is permitted, but TOML does not appear to prohibit
+;; using the escaped form, either.
 (define (keys->string ks)
-  (string-join (map symbol->string ks) "."))
+  (define (control-escapes s)
+    (match s
+      ["\b" "\\b"]
+      ["\n" "\\n"]
+      ["\f" "\\f"]
+      ["\r" "\\r"]
+      ["\t" "\\t"]
+      ["\u007F" "\\u007f"]
+      [other-control
+       (define n (char->integer (string-ref other-control 0)))
+       (string-append "\\u"
+                      (if (< n 16) "000" "00")
+                      (number->string n 16))]))
+  (string-join (for/list ([sym (in-list ks)])
+                 (define str
+                   (regexp-replace* #rx"[\u0000-\u001F\u007F]"
+                                    (symbol->string sym)
+                                    control-escapes))
+                 (if (regexp-match? #rx"^[A-Za-z0-9_-]+$" str)
+                     str
+                     (if (string-contains? str "\"")
+                         (string-append "'" str "'")
+                         (string-append "\"" str "\""))))
+               "."))
+
+(module+ test
+  (check-equal? (keys->string '()) "")
+  (check-equal? (keys->string '(a b)) "a.b")
+  (check-equal? (keys->string '(a b.c)) "a.\"b.c\"")
+  (check-equal? (keys->string (list (string->symbol "backsp\b\b"))) "\"backsp\\b\\b\"")
+  (check-equal? (keys->string (list (string->symbol "\u001b"))) "\"\\u001b\"")
+  (check-equal? (keys->string (list (string->symbol "\u007f"))) "\"\\u007f\"")
+  (check-equal? (keys->string '(|"123"|)) "'\"123\"'"))
 
 (define (kvs->table keys pairs [aot? #f] [orig-keys keys])
   ;; (listof symbol?) (listof (list/c (listof symbol?) any/c)) -> table?

@@ -70,8 +70,8 @@
                             (return
                              (match-let ([(list all-but-k ... k) keys])
                                (kvs->table all-but-k
-                                            (list (list (list k) (hasheq)))
-                                            #t))))
+                                           (list (list (list k) (hasheq)))
+                                           #t))))
                        (pdo $nl
                             $ws-or-comments
                             (kvs <- $kv-lines)
@@ -86,8 +86,8 @@
                                     [aots (cons aot0 aots)])
                                (match-define (list all-but-k ... k) keys)
                                (kvs->table all-but-k
-                                            (list (list (list k) aots))
-                                            #t)))))))
+                                           (list (list (list k) aots))
+                                           #t)))))))
        "array-of-tables"))
 
 (define (array-of-tables-same keys)
