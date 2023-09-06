@@ -1,5 +1,8 @@
 #lang racket/base
 
-(require "private/parsers/main.rkt")
+(require "private/tomlexpr.rkt"
+         "private/parsers/main.rkt")
 
-(provide parse-toml)
+(provide parse-toml
+         tomlexpr?
+         tomlexpr->string)

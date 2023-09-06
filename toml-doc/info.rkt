@@ -4,6 +4,7 @@
 (define build-deps '("base"
                      "scribble-lib"
 		     "racket-doc"
+		     "gregor-doc"
                      "toml-lib"))
 
 (define scribblings '(("scribblings/toml.scrbl" () (parsing-library))))
