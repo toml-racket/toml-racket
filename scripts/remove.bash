@@ -13,5 +13,6 @@ rem() {
 }
 
 rem toml
+rem toml-doc
 rem toml-compliance
 rem toml-lib

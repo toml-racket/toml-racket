@@ -2,8 +2,8 @@
 
 set -eu -o pipefail
 
-url='https://github.com/BurntSushi/toml-test/releases/download/v1.2.0/toml-test-v1.2.0-linux-amd64.gz'
-sha256='012da9aa3bcc978d6528f8de5624b51c77c4e8a63cb2a152202d62516e849756'
+url='https://github.com/BurntSushi/toml-test/releases/download/v1.3.0/toml-test-v1.3.0-linux-amd64.gz'
+sha256='0f5f1b92eec98c9344b97bdd8d2beabb8c64a66fa77de5b9a23a98c97e263111'
 default_dest_path='/usr/local/bin/toml-test'
 
 cmd_help() {
