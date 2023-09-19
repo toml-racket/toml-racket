@@ -39,10 +39,18 @@ cmd_default() {
         racket -l toml/compliance/decoder
     )
 
+    cmd_enc=(
+        toml-test -encoder
+        --
+        racket -l toml/compliance/encoder
+    )
+
     if [[ ${log_to+present} ]]; then
         "${cmd[@]}" 2>&1 | tee "$log_to"
+        "${cmd_enc[@]}" 2>&1 | tee "$log_to"
     else
         "${cmd[@]}"
+        "${cmd_enc[@]}"
     fi
 }
 
