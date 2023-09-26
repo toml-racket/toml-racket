@@ -181,9 +181,4 @@ position information when a key has been defined multiple times.
 However, for tables, it only provides the table name (and not the
 in-file position) of the offending situation.
 
-@subsection{Automatic generation of output TOML string}
-
-There is currently not an automated generator of TOML output; this
-library only provides the single parser for reading TOML strings.
-
 @close-eval[ev]
