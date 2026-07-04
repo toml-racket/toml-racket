@@ -1,7 +1,8 @@
 #lang info
 
 (define deps '("base"))
-(define build-deps '("base"
+(define build-deps '("gregor-lib"
+                     "base"
                      "scribble-lib"
 		     "racket-doc"
 		     "gregor-doc"
