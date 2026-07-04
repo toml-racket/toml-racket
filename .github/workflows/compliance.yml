@@ -18,7 +18,7 @@ jobs:
           variant: 'CS'
           version: '8.5'
       - name: Install Package and its Dependencies
-        run: ./scripts/install.bash
+        run: ./scripts/install.bash -v
       - name: Install toml-test
         run: ./scripts/github-action-install-toml-test.bash
       - name: Run toml-test

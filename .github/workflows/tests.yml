@@ -18,6 +18,6 @@ jobs:
           variant: 'CS'
           version: '8.5'
       - name: Install Package and its Dependencies
-        run: ./scripts/install.bash
+        run: ./scripts/install.bash -v
       - name: Run tests
         run: ./scripts/test.bash

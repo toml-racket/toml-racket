@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -eu -o pipefail
 
+verbose=''
+[[ $# -gt 0 && $1 == -v ]] && verbose=YES
 dir="${0%/*}"
 proj_dir="${dir%/*}"
 
@@ -20,6 +22,8 @@ ins() {
         printf 'Something went wrong...\n' >&2
         printf '%s\n' "$message" >&2
         exit $ret
+    elif [[ $verbose ]]; then
+        cat <<<"$message"
     fi
     
     popd >/dev/null
