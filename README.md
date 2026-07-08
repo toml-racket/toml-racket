@@ -1,5 +1,4 @@
-[![Tests](https://github.com/toml-racket/toml-racket/actions/workflows/tests.yml/badge.svg)](https://github.com/toml-racket/toml-racket/actions/workflows/tests.yml) [![TOML Compliance](https://github.com/toml-racket/toml-racket/actions/workflows/compliance.yml/badge.svg)](https://github.com/toml-racket/toml-racket/actions/workflows/compliance.yml) [![raco pkg install toml](https://img.shields.io/badge/raco%20pkg%20install-toml-purple)](https://pkgs.racket-lang.org/package/toml)
-
+<img src="misc/toml-racket.png" height="50" alt="toml-racket logo"/> [![Tests](https://github.com/toml-racket/toml-racket/actions/workflows/tests.yml/badge.svg)](https://github.com/toml-racket/toml-racket/actions/workflows/tests.yml) [![TOML Compliance](https://github.com/toml-racket/toml-racket/actions/workflows/compliance.yml/badge.svg)](https://github.com/toml-racket/toml-racket/actions/workflows/compliance.yml) [![raco pkg install toml](https://img.shields.io/badge/raco%20pkg%20install-toml-purple)](https://pkgs.racket-lang.org/package/toml)
 
 This is a [TOML] v1.0.0 parser library, with dates supporting nanosecond
 precision. It passes all tests in [toml-test] v1.3.0.
