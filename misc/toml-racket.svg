@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: Adobe Illustrator 19.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+
+<svg
+   version="1.1"
+   id="Layer_1"
+   x="0px"
+   y="0px"
+   viewBox="0 0 400 400"
+   style="enable-background:new 0 0 400 400;"
+   xml:space="preserve"
+   sodipodi:docname="toml-racket.svg"
+   inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
+   inkscape:export-filename="toml-racket.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+   id="defs1">
+	
+	
+	
+</defs><sodipodi:namedview
+   id="namedview1"
+   pagecolor="#ffffff"
+   bordercolor="#111111"
+   borderopacity="1"
+   inkscape:showpageshadow="0"
+   inkscape:pageopacity="0"
+   inkscape:pagecheckerboard="1"
+   inkscape:deskcolor="#d1d1d1"
+   inkscape:zoom="0.9275"
+   inkscape:cx="160.10782"
+   inkscape:cy="166.57682"
+   inkscape:window-width="1097"
+   inkscape:window-height="614"
+   inkscape:window-x="0"
+   inkscape:window-y="0"
+   inkscape:window-maximized="1"
+   inkscape:current-layer="Layer_1" />
+<style
+   type="text/css"
+   id="style1">
+	.st0{fill:#FFFFFF;}
+	.st1{fill:#7E7F7F;}
+</style>
+<rect
+   id="XMLID_1_"
+   class="st0"
+   width="400"
+   height="400" />
+<g
+   id="XMLID_11_">
+		<path
+   id="XMLID_12_"
+   class="st1"
+   d="m 28.6,30.5 h 75.1 V 67.8 H 69 v 262.7 h 34.7 V 368 H 28.6 Z" />
+	</g><g
+   id="XMLID_3_">
+		<path
+   id="XMLID_5_"
+   class="st1"
+   d="m 365.7,368 h -75.1 v -37.3 h 34.7 V 68 H 290.6 V 30.5 h 75.1 z" />
+	</g>
+<g
+   id="g1"
+   transform="matrix(0.38869509,0,0,0.38869509,100.3961,100.49931)"><circle
+     id="circle"
+     fill="#ffffff"
+     cx="256.25201"
+     cy="255.98599"
+     r="253.093" /><path
+     id="blue-piece"
+     fill="#3e5ba9"
+     d="m 455.398,412.197 c 33.792,-43.021 53.946,-97.262 53.946,-156.211 0,-139.779 -113.313,-253.093 -253.093,-253.093 -30.406,0 -59.558,5.367 -86.566,15.197 102.75,53.899 238.664,229.749 285.713,394.107 z" /><path
+     id="left-red-piece"
+     fill="#9f1d20"
+     d="M 220.003,164.337 C 180.522,121.804 136.308,88.025 89.48,65.622 36.573,112.011 3.159,180.092 3.159,255.986 3.159,319.8 26.785,378.09 65.756,422.609 100.111,319.392 164.697,219.907 220.003,164.337 Z" /><path
+     id="bottom-red-piece"
+     fill="#9f1d20"
+     d="m 266.638,221.727 c -54.792,59.051 -109.392,162.422 -129.152,257.794 35.419,18.857 75.84,29.559 118.766,29.559 44.132,0 85.618,-11.306 121.74,-31.163 -20.821,-96.205 -60.124,-184.313 -111.354,-256.19 z" /></g></svg>
