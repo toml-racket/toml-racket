@@ -21,7 +21,7 @@
 
   (test-equal? "$exp parses e-12"
                (parse-result $exp "e-12")
-               -12)
+               "e-12")
 
   (test-equal? "$float parses 1.2345"
                (parse-result $float "1.2345")
@@ -61,6 +61,46 @@
   (test-equal? "Lit. float 1.23e-5"
                (parse-toml "x = 1.23e-5")
                #hasheq((x . 1.23e-5)))
+
+  (test-equal? "Lit. float 0.001"
+               (parse-toml "x = 0.001")
+               #hasheq((x . 0.001)))
+
+  (test-equal? "Lit. float 1.05"
+               (parse-toml "x = 1.05")
+               #hasheq((x . 1.05)))
+
+  (test-equal? "Lit. float -1.05"
+               (parse-toml "x = -1.05")
+               #hasheq((x . -1.05)))
+
+  (test-equal? "Lit. float 1.0_5"
+               (parse-toml "x = 1.0_5")
+               #hasheq((x . 1.05)))
+
+  (test-equal? "Lit. float 1.05e2"
+               (parse-toml "x = 1.05e2")
+               #hasheq((x . 105.0)))
+
+  (test-equal? "Lit. float -0.5"
+               (parse-toml "x = -0.5")
+               #hasheq((x . -0.5)))
+
+  (test-equal? "Lit. float -0.5e2"
+               (parse-toml "x = -0.5e2")
+               #hasheq((x . -50.0)))
+
+  (test-equal? "Lit. float -0.0"
+               (parse-toml "x = -0.0")
+               #hasheq((x . -0.0)))
+
+  (test-equal? "Lit. float -0e5"
+               (parse-toml "x = -0e5")
+               #hasheq((x . -0.0)))
+
+  (test-equal? "Lit. float -0E-2"
+               (parse-toml "x = -0E-2")
+               #hasheq((x . -0.0)))
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; Integer
