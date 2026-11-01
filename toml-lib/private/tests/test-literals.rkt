@@ -21,7 +21,7 @@
 
   (test-equal? "$exp parses e-12"
                (parse-result $exp "e-12")
-               -12)
+               "e-12")
 
   (test-equal? "$float parses 1.2345"
                (parse-result $float "1.2345")

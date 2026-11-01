@@ -116,10 +116,10 @@
                   $lit-string))
        "string"))
 
-(define $optional-sign
-  (<or> (>> (char #\-) (return '(#\-)))
-        (>> (char #\+) (return '(#\+)))
-        (return '())))
+(define $sign
+  (<or> (>> (char #\-) (return -))
+        (>> (char #\+) (return +))
+        (return +)))
 
 (define (make-$underscore-separated $parser)
   (define $inner
@@ -134,15 +134,17 @@
    (v <- $inner)
    (return (list->string v))))
 
+(define $digits
+  (make-$underscore-separated $digit))
+
+(define $unsigned-dec-int
+  (<or> (>> (char #\0) (return "0"))
+        $digits))
+
 (define $dec-int
-  (<?> (try (pdo
-             (sign <- $optional-sign)
-             (<or> (>> (char #\0) (return 0))
-                   (pdo (s <- (make-$underscore-separated $digit))
-                        (return (let ([n (string->number s)])
-                                  (match sign
-                                    [(list #\-) (- n)]
-                                    [_ n])))))))
+  (<?> (try (pdo (sign <- $sign)
+                 (n <- $unsigned-dec-int)
+                 (return (sign (string->number n)))))
        "decimal integer"))
 
 (define $hex-int
@@ -174,50 +176,31 @@
                   $dec-int))
        "integer"))
 
-(define $special-float
-  (<?> (try (pdo (sign <- $optional-sign)
-                 (<or> (>> (string "nan")
-                           (return (match sign
-                                     [(list #\-) -nan.0]
-                                     [_  +nan.0])))
-                       (>> (string "inf")
-                           (return (match sign
-                                     [(list #\-) -inf.0]
-                                     [_ +inf.0]))))))
-       "Special float (nan/inf)"))
-
-(define $zero-prefixable-int
-  (<?> (try (pdo (s <- (make-$underscore-separated $digit))
-                 (return (string->number s))))
-       "Zero prefixable integer"))
-
-(define $float
-  (<?>
-   (try
-    (<or> $special-float
-          (pdo (i <- $dec-int)
-               (<or> (try (pdo (exp <- $exp)
-                               (return (string->number (format "~ae~a" i exp)))))
-                     (try (pdo (char #\.)
-                               (f <- $zero-prefixable-int)
-                               (exp <- (<or> $exp (return null)))
-                               (return (string->number
-                                        (format "~a.~a~a"
-                                                i
-                                                f (if (null? exp)
-                                                      ""
-                                                      (format "e~a" exp)))))))))))
-   "float"))
+(define $frac
+  (pdo (char #\.)
+       (digits <- $digits)
+       (return (string-append "." digits))))
 
 (define $exp
-  (<?> (try (pdo
-             (oneOf "eE")
-             (sign <- $optional-sign)
-             (i <- $zero-prefixable-int)
-             (return (match sign
-                       [(list #\-) (- i)]
-                       [_ i]))))
-       "Float exponent"))
+  (pdo (oneOf "eE")
+       (sign <- (option #\+ (oneOf "+-")))
+       (digits <- $digits)
+       (return (format "e~a~a" sign digits))))
+
+(define $unsigned-float
+  (<or> (>> (string "inf") (return +inf.0))
+        (>> (string "nan") (return +nan.0))
+        (pdo-seq $unsigned-dec-int
+                 (<or> $exp
+                       (pdo-seq $frac (option "" $exp)
+                                #:combine-with string-append))
+                 #:combine-with (compose string->number string-append))))
+
+(define $float
+  (<?> (try (pdo (sign <- $sign)
+                 (x <- $unsigned-float)
+                 (return (sign x))))
+       "float"))
 
 (define $true  (pdo (string "true")  (return #t)))
 (define $false (pdo (string "false") (return #f)))
